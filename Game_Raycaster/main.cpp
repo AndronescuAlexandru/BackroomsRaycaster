@@ -1,22 +1,38 @@
-﻿// Version : 0.2.0
+﻿// Version : 0.2.2
 
 #include <iostream>
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
-#include <unordered_map>
 #include <algorithm> 
 
-#include <SFML/Graphics.hpp>
+#include "Maps.h" // includes data from all maps
+#include "Player.h" // includes the player class and the SFML/Graphics.hpp header file
+#include "Textures.h" // includes all texture files
+
+//#include <SFML/Graphics.hpp>
 
 #define PI 3.1459
 #define FOV 90
-#define RENDER_DISTANCE 8
+#define MAIN_MENU 0
+#define IN_GAME 1
+#define GAME_OVER 2
+
+short wallShading = 2;
+short gameState = 0;
+short RENDER_DISTANCE = 8;
+
+// map size
+
+const short MAP_WIDTH = 64;
+const short MAP_HEIGHT = 64;
+
+short currentLevel = 0; // saves the current level number where the player will be
 
 // screen resolution
 
-const int screenWidth = 800;
-const int screenHeight = 600;
+int screenWidth = 800;
+int screenHeight = 600;
 
 float cameraHeight = 0.66; // height of player camera(1.0 is ceiling, 0.0 is floor)
 
@@ -25,277 +41,43 @@ const int texture_wall_size = 128; // size(width and height) of each wall type i
 
 const float fps_refresh_time = 0.1; // time between FPS text refresh. FPS is smoothed out over this time
 
-// player
-sf::Vector2f position(1.5, 2.0); // coordinates in worldMap
-sf::Vector2f direction(0.0, 1.0); // direction, relative to (0,0)
-sf::Vector2f plane(-0.66, 0.0); // 2d raycaster version of the camera plane,
 
-// must be perpendicular to rotation
-float playerSize = 0.375; // dimensions of player collision box, in tiles
-float playerMoveSpeed = 5.0; // player movement speed in tiles per second
-float playerRotateSpeed = 3.0; // player rotation speed in radians per second
 
-// map size
-const int mapWidth = 64;
-const int mapHeight = 64;
-
-// list of wall texture types, in order as they appear in the full texture
-enum class Textures {
-    Dirt,
-    Bricks,
-    Bush,
-    StoneBricks,
-    Ice,
-    DarkStoneBricks,
-    Wood,
-    Concrete,
-    Truck,
-    RedBricks,
-    GarageDoor,
-    CrackedConcrete,
-    HotelWall,
-    HotelWallDoor,
-    HotelElevatorDoor,
-    HotelWallPainting1,
-};
-
-// valid wall types and their texture for the world map
-const std::unordered_map<char, Textures> wallTypes{
-    {'#', Textures::StoneBricks},
-    {'M', Textures::DarkStoneBricks},
-    {'!', Textures::Bricks},
-    {'$', Textures::RedBricks },
-    {'=', Textures::Wood},
-    {'N', Textures::Bush},
-    {'~', Textures::Ice},
-    {'@', Textures::Dirt},
-    {'^', Textures::Concrete},
-    {'&', Textures::CrackedConcrete },
-    {'T', Textures::Truck },
-    {'G', Textures::GarageDoor },
-    {'H', Textures::HotelWall },
-    {'D', Textures::HotelWallDoor },
-    {'E', Textures::HotelElevatorDoor },
-    {'P', Textures::HotelWallPainting1 },
-};
-
-// top-down view of world map
-const char worldMap[] =
-"HDHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH"
-"H.H.....H......H.H.............................................H"
-"D.......H......D.D.............................................H"
-"H.H.....H......H.H.............................................H"
-"H.HHHHHHH......H.H.............................................H"
-"D.D............D.D.............................................H"
-"H.H............H.H.............................................H"
-"H.H............H.H.............................................H"
-"D.D............D.D.............................................H"
-"P.H............H.HHHHHH........................................H"
-"H.H............H.H....H........................................H"
-"D.D............D.D....H........................................H"
-"H.H............H.H.HHHH........................................H"
-"H.H............H.H....H........................................H"
-"D.D............D......H........................................H"
-"P.H............H.H....H........................................H"
-"H.H............H.HHHHHH........................................H"
-"D.D............D.D.............................................H"
-"H.H............H.H.............................................H"
-"H.H............H.H.............................................H"
-"D.D............D.H.............................................H"
-"H.H............H.H.............................................H"
-"H.HHHHHH.......H.H.............................................H"
-"D......H.......D.H.............................................H"
-"P.H....H.......H.H.............................................H"
-"H.HHHHHH.......H.H.............................................H"
-"H.D............D.H.............................................H"
-"H.H............H.H.............................................H"
-"H.HHEHEHPHHEHEHH.HHDHHDHHDHHDHHDHHDHHDHHDHHDHH.HHDHHDHHDHHDHHDHH"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"H..............................................................H"
-"HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH";
-
-const int heightMap[] =
+char getTile(int x, int y, short level)
 {
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,3,3,3,3,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,3,3,3,3,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,3,3,3,3,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,3,3,3,3,3,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,3,3,3,3,3,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,3,3,3,3,3,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,3,3,3,3,3,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,
-};
-
-const int groundHeightMap[] =
-{
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,3,3,3,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,3,3,3,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,3,3,3,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,3,3,3,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,3,3,3,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-};
-
-// get a tile from worldMap. Not memory safe.
-char getTile(int x, int y)
-{
-    return worldMap[y * mapWidth + x];
+    switch (level)
+    {
+    case 0:
+        return level0[y * MAP_WIDTH + x];
+    case 1:
+        return level1[y * MAP_WIDTH + x];
+    case 2:
+        return level2[y * MAP_WIDTH + x];
+    default:
+        return level0[y * MAP_WIDTH + x];
+        break;
+    }
 }
 
-int getHeight(int x, int y)
+int getHeight(int x, int y, short level)
 {
-    return heightMap[y * mapWidth + x];
+    switch (level)
+    {
+    case 0:
+        return level0HeightMap[y * MAP_WIDTH + x];
+    case 1:
+        return level1HeightMap[y * MAP_WIDTH + x];
+    case 2:
+        return level2HeightMap[y * MAP_WIDTH + x];
+    default:
+        return level0HeightMap[y * MAP_WIDTH + x];
+        break;
+    }
 }
 
 int getGroundHeight(int x, int y)
 {
-    return groundHeightMap[y * mapWidth + x];
+    return groundHeightMap[y * MAP_WIDTH + x];
 }
 
 // checks worldMap for errors
@@ -303,40 +85,18 @@ int getGroundHeight(int x, int y)
 bool mapCheck() 
 {
     // check size
-    int mapSize = sizeof(worldMap) - 1; // - 1 because sizeof also counts the final NULL character
+    int mapSize = sizeof(level0) - 1; // - 1 because sizeof also counts the final NULL character
 
-    if (mapSize != mapWidth * mapHeight) 
+    if (mapSize != MAP_WIDTH * MAP_HEIGHT)
     {
-        std::cout << "Map size " << mapSize << " is not mapWidth * mapHeight " << mapWidth * mapHeight <<"\n";
+        std::cout << "Map size " << mapSize << " is not mapWidth * mapHeight " << MAP_WIDTH * MAP_HEIGHT <<"\n";
         return false;
-    }
-
-    for (int y = 0; y < mapHeight; y++) 
-    {
-        for (int x = 0; x < mapWidth; x++) 
-        {
-            char tile = getTile(x, y);
-            
-            // check if tile type is valid
-            if (tile != '.' && wallTypes.find(tile) == wallTypes.end()) 
-            {
-                std::cout << "map tile at " << x << y << " has an unknown tile type " << tile;
-                return false;
-            }
-
-            // check if edges are walls
-            if ((y == 0 || x == 0 || y == mapHeight - 1 || x == mapWidth - 1) && tile == '.') 
-            {
-                std::cout << "map edge at " << x << y << " is a floor(should be wall)\n";
-                return false;
-            }
-        }
     }
 
     return true;
 }
 
-// check if a rectangular thing with given size can move to given position without colliding with walls or
+// check if a rectangular can move to given position without colliding with walls or
 // being outside of the map
 // position is considered the middle of the rectangle
 
@@ -346,7 +106,7 @@ bool canMove(sf::Vector2f position, sf::Vector2f size)
     sf::Vector2i upper_left(position - size / 2.0f);
     sf::Vector2i lower_right(position + size / 2.0f);
 
-    if (upper_left.x < 0 || upper_left.y < 0 || lower_right.x >= mapWidth || lower_right.y >= mapHeight) 
+    if (upper_left.x < 0 || upper_left.y < 0 || lower_right.x >= MAP_WIDTH || lower_right.y >= MAP_HEIGHT)
     {
         return false; // out of map bounds
     }
@@ -356,7 +116,7 @@ bool canMove(sf::Vector2f position, sf::Vector2f size)
     {
         for (int x = upper_left.x; x <= lower_right.x; x++) 
         {
-            if (getTile(x, y) != '.') {
+            if (getTile(x, y, currentLevel) != '.') {
                 return false;
             }
         }
@@ -378,7 +138,8 @@ void updateFPS(sf::Text &fpsText, float dt, int64_t frame_time_micro)
     char frameInfoString[sizeof("FPS: *****.*, Frame time: ******")];
 
     // Update FPS, smoothed over time
-    if (dt_counter >= fps_refresh_time) {
+    if (dt_counter >= fps_refresh_time) 
+    {
         float fps = (float)frame_counter / dt_counter;
         frame_time_micro /= frame_counter;
         snprintf(frameInfoString, sizeof(frameInfoString), "FPS: %3.1f, Frame time: %6ld", fps, frame_time_micro);
@@ -393,7 +154,6 @@ void updateFPS(sf::Text &fpsText, float dt, int64_t frame_time_micro)
 
 float get_degrees(const float i_degrees)
 {
-    //Give this function any angle (in degrees) and it converts it to an angle between 0 and 360.
     return static_cast<float>(fmod(360 + fmod(i_degrees, 360), 360));
 }
 
@@ -402,57 +162,87 @@ float deg_to_rad(const float i_degrees)
     return PI * get_degrees(i_degrees) / 180;
 }
 
+void keyboardInput(bool hasFocus, Player &player, sf::Vector2f size, float dt) // handles keyboard input
+{
+    if (hasFocus)
+    {
+        using kb = sf::Keyboard;
+
+        // moving forward or backwards (1.0 or -1.0)
+        float moveForward = 0.0;
+
+        // get input
+        if (kb::isKeyPressed(kb::Up)) 
+        {
+            moveForward = 1.0;
+        }
+        else if (kb::isKeyPressed(kb::Down)) 
+        {
+            moveForward = -1.0;
+        }
+
+        if (kb::isKeyPressed(kb::A)) // shortens the render distance and darkens the wall shading
+        {
+            wallShading = 6;
+            RENDER_DISTANCE = 4;
+        }
+
+        if (kb::isKeyPressed(kb::D))
+        {
+            wallShading = 2;
+            RENDER_DISTANCE = 16;
+        }
+
+        // handle movement
+        if (moveForward != 0.0f) 
+        {
+            sf::Vector2f moveVec = player.direction * player.playerMoveSpeed * moveForward * dt;
+
+            if (canMove(sf::Vector2f(player.position.x + moveVec.x, player.position.y), size)) {
+                player.position.x += moveVec.x;
+            }
+            if (canMove(sf::Vector2f(player.position.x, player.position.y + moveVec.y), size)) {
+                player.position.y += moveVec.y;
+            }
+        }
+
+        // rotating rightwards or leftwards(1.0 or -1.0)
+        float rotateDirection = 0.0;
+
+        // get input
+        if (kb::isKeyPressed(kb::Left)) 
+        {
+            rotateDirection = -1.0;
+        }
+        else if (kb::isKeyPressed(kb::Right)) 
+        {
+            rotateDirection = 1.0;
+        }
+
+        // handle rotation
+        if (rotateDirection != 0.0) 
+        {
+            float rotation = player.playerRotateSpeed * rotateDirection * dt;
+            player.direction = rotateVec(player.direction, rotation);
+            player.plane = rotateVec(player.plane, rotation);
+        }
+    }
+}
+
 int main() 
 {
+    bool hasFocus = true;
 
-    // if the map is not correct, we can have segmentation faults. So check it.
-    if (!mapCheck()) 
-    {
-        std::cout << "Map is invalid\n";
-        return 1;
-    }
+    Player player;
 
     sf::Font font;
-    if (!font.loadFromFile("arial.ttf")) 
-    {
-        std::cout << "Cannot open font arial.ttf!\n";
-        return 1;
-    }
 
     sf::Texture texture;
-    if (!texture.loadFromFile("Textures/textures.png")) 
-    {
-        std::cout << "Cannot open texture textures.png!\n";
-        return 1;
-    }
+    sf::Texture level0_Textures;
 
-    sf::Image fridgeSpriteTexture;
-    if (!fridgeSpriteTexture.loadFromFile("Textures/fridge.png"))
-    {
-        std::cout << "Cannot open texture textures.png!\n";
-        return 1;
-    }
+    sf::Vector2f size(player.playerSize, player.playerSize); // player collision box width and height
 
-    // render state that uses the texture
-    sf::RenderStates state(&texture);
-
-    float fieldOfView = 60;
-
-    sf::Image floor_image;
-    if (!floor_image.loadFromFile("Textures/hotel_floor.jpg"))
-        std::cout << "Cannot load floor texture hotel_floor.jpg\n";
-
-    sf::Vector2f size(playerSize, playerSize); // player collision box width and height, derived from size_f
-
-    // create window
-    sf::RenderWindow window(sf::VideoMode(screenWidth + 1, screenHeight), "Adventure 3D");
-    window.setSize(sf::Vector2u(screenWidth, screenHeight)); // why add +1 and then set the size correctly?
-    // Fixes some problem with the viewport. If you
-    // don't do it, you'll see lots of gaps. Maybe
-    // there's a better fix.
-
-    //window.setFramerateLimit(60);
-    bool hasFocus = true;
+    sf::RenderStates state;
 
     // lines used to draw walls and floors on the screen
     sf::VertexArray lines(sf::Lines, 18 * screenWidth);
@@ -462,92 +252,138 @@ int main()
 
     int64_t frame_time_micro = 0; // time needed to draw frames in microseconds
 
-    std::vector<float> zBuffer(screenWidth, std::numeric_limits<float>::infinity());
+    std::cout << "Enter level choice\n";
+    std::cin >> currentLevel;
+
+    std::cout << "Enter draw distance\n";
+    std::cin >> RENDER_DISTANCE;
+
+    std::cout << "Enter screen width\n";
+    std::cin >> screenWidth;
+
+    std::cout << "Enter screen height\n";
+    std::cin >> screenHeight;
+  
+    if (!mapCheck()) // checks if the map is correct
+    {
+        std::cout << "Map is invalid\n";
+        return 1;
+    }
+
+    if (!font.loadFromFile("Fonts/arial.ttf")) //loads font
+    {
+        std::cout << "Cannot open font arial.ttf!\n";
+        return 1;
+    }
+
+    //loads textures
+    if (!texture.loadFromFile("Textures/textures.png"))
+    {
+        std::cout << "Cannot open texture textures.png!\n";
+        return 1;
+    }
+
+    if (!level0_Textures.loadFromFile("Textures/level_0_textures.png"))
+    {
+        std::cout << "Cannot open texture level_0_textures.png!\n";
+        return 1;
+    }
+
+    // set render state that uses the texture
+    switch (currentLevel)
+    {
+    case 0:
+        state.texture = &level0_Textures;
+        break;
+    case 1:
+        state.texture = &level0_Textures;
+        break;
+    case 2:
+        state.texture = &texture;
+        break;
+    default:
+        break;
+    }  
+
+    sf::RenderWindow window(sf::VideoMode(screenWidth, screenHeight), "Backrooms"); // create window after loading everything up
+
+    //window.setSize(sf::Vector2u(screenWidth, screenHeight));
+
+    //window.setFramerateLimit(60);
 
     while (window.isOpen()) 
     {
-        std::fill(zBuffer.begin(), zBuffer.end(), std::numeric_limits<float>::infinity());
-
         float dt = clock.restart().asSeconds();
+        sf::Event event;
+
+        sf::View view = window.getDefaultView();
         
         updateFPS(fpsText, dt, frame_time_micro);
 
         // handle SFML events
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            switch (event.type) {
-            case sf::Event::Closed:
-                window.close();
-                break;
-            case sf::Event::LostFocus:
-                hasFocus = false;
-                break;
-            case sf::Event::GainedFocus:
-                hasFocus = true;
-                break;
-            default:
-                break;
+
+        while (window.pollEvent(event)) 
+        {
+
+            switch (event.type) 
+            {
+                case sf::Event::Closed:
+                    window.close();
+                    break;
+                case sf::Event::LostFocus:
+                    hasFocus = false;
+                    break;
+                case sf::Event::GainedFocus:
+                    hasFocus = true;
+                    break;
+                case sf::Event::Resized:
+                    // update the view to the new size of the window
+                    view.setSize({
+                                            static_cast<float>(event.size.width),
+                                            static_cast<float>(event.size.height)
+                        });
+                    window.setView(view);
+                    break;
+                default:
+                    break;
             }
         }
 
-        // handle keyboard input
-        if (hasFocus) {
-            using kb = sf::Keyboard;
-
-            // moving forward or backwards (1.0 or -1.0)
-            float moveForward = 0.0f;
-
-            // get input
-            if (kb::isKeyPressed(kb::Up)) {
-                moveForward = 1.0f;
-            }
-            else if (kb::isKeyPressed(kb::Down)) {
-                moveForward = -1.0f;
-            }
-
-            // handle movement
-            if (moveForward != 0.0f) {
-                sf::Vector2f moveVec = direction * playerMoveSpeed * moveForward * dt;
-
-                if (canMove(sf::Vector2f(position.x + moveVec.x, position.y), size)) {
-                    position.x += moveVec.x;
-                }
-                if (canMove(sf::Vector2f(position.x, position.y + moveVec.y), size)) {
-                    position.y += moveVec.y;
-                }
-            }
-
-            // rotating rightwards or leftwards(1.0 or -1.0)
-            float rotateDirection = 0.0f;
-
-            // get input
-            if (kb::isKeyPressed(kb::Left)) {
-                rotateDirection = -1.0f;
-            }
-            else if (kb::isKeyPressed(kb::Right)) {
-                rotateDirection = 1.0f;
-            }
-
-            // handle rotation
-            if (rotateDirection != 0.0f) {
-                float rotation = playerRotateSpeed * rotateDirection * dt;
-                direction = rotateVec(direction, rotation);
-                plane = rotateVec(plane, rotation);
-            }
-        }
+        keyboardInput(hasFocus, player, size, dt);
 
         lines.resize(0);
 
         // loop through vertical screen lines, draw a line of wall for each
-        for (int x = 0; x < screenWidth; ++x) 
+        for (int x = 0; x < screenWidth; x++) 
         {
+            char tile = '.'; // tile type that got hit
+            bool horizontal; // did we hit a horizontal side? Otherwise it's vertical
+
+            float perpWallDist = 0.0; // wall distance, projected on camera direction
+
+            int heightTile = 1;
+            int groundHeight = 1;
+            int wallHeight; // height of wall to draw on the screen at each distance
+
+            int ceilingPixel = 0; // position of ceiling pixel on the screen
+            int groundPixel = screenHeight; // position of ground pixel on the screen
+            int wallTextureNum; // number of texture from the texture file
+
+            // colors for floor tiles
+            sf::Color color;
+            sf::Color color1;
+            sf::Color color2;
+
+            sf::Color floorColor;
+
+            sf::Vector2i step; // what direction to step in (+1 or -1 for each dimension)
+            sf::Vector2f sideDist; // distance from current position to next gridline, for x and y separately
 
             // ray to emit
-            float cameraX = 2 * x / (float)screenWidth - 1.0f; // x in camera space (between -1 and +1)
-            sf::Vector2f rayPos = position;
-            sf::Vector2f rayDir = direction + plane * cameraX;
-
-            // NOTE: with floats, division by zero gives you the "infinity" value. This code depends on this.
+            float cameraX = 2 * x / (float)screenWidth - 1.0; // x in camera space (between -1 and +1)
+            sf::Vector2f rayPos = player.position;
+            sf::Vector2f rayDir = player.direction + player.plane * cameraX;
+            sf::Vector2i mapPos(rayPos); // which box of the map we're in
 
             // calculate distance traversed between each grid line for x and y based on direction
             sf::Vector2f deltaDist(
@@ -555,13 +391,8 @@ int main()
                 sqrt(1.0f + (rayDir.x * rayDir.x) / (rayDir.y * rayDir.y))
             );
 
-            sf::Vector2i mapPos(rayPos); // which box of the map we're in
-
-            sf::Vector2i step; // what direction to step in (+1 or -1 for each dimension)
-            sf::Vector2f sideDist; // distance from current position to next gridline, for x and y separately
-
             // calculate step and initial sideDist
-            if (rayDir.x < 0.0f) {
+            if (rayDir.x < 0.0) {
                 step.x = -1;
                 sideDist.x = (rayPos.x - mapPos.x) * deltaDist.x;
             }
@@ -578,28 +409,38 @@ int main()
                 sideDist.y = (mapPos.y + 1.0f - rayPos.y) * deltaDist.y;
             }
 
-            char tile = '.'; // tile type that got hit
-            bool horizontal; // did we hit a horizontal side? Otherwise it's vertical
+            switch (currentLevel)
+            {
+            case 0: 
+                color1 = sf::Color(182, 179, 102);
+                color2 = sf::Color(255, 255, 255);
 
-            float perpWallDist = 0.0; // wall distance, projected on camera direction
+                floorColor = sf::Color(178, 163, 106);
+                
+                break;
+            case 1:
+                color1 = sf::Color(154, 162, 198);
+                color2 = sf::Color(154, 162, 198); //sf::Color(129, 124, 121);
+                floorColor = sf::Color(154, 153, 149);
+                floorColor.r /= wallShading;
+                floorColor.g /= wallShading;
+                floorColor.b /= wallShading;
+                break;
+            case 2:
+                color1 = sf::Color(43, 162, 198);
+                color2 = sf::Color(96, 96, 96);
+                floorColor = sf::Color(96, 96, 96);
+                break;
+            default:
+                color1 = sf::Color(43, 162, 198);
+                color2 = sf::Color(96, 96, 96);
 
-            int heightTile = 1;
-            int groundHeight = 1;
-            int wallHeight; // height of wall to draw on the screen at each distance
-            int wallHeight2;
-            int wallHeight3;
-            int ceilingPixel = 0; // position of ceiling pixel on the screen
-            int groundPixel = screenHeight; // position of ground pixel on the screen
-
-            // colors for floor tiles
-            sf::Color color1 = sf::Color(43, 162, 198);
-            sf::Color color2 = sf::Color(96, 96, 96);
-            sf::Color color3 = sf::Color(215, 169, 120);
-            sf::Color color4 = sf::Color(88, 7, 4);
-            sf::Color floorColor = sf::Color(96, 96, 96);  
+               floorColor = sf::Color(96, 96, 96);
+                break;
+            }
 
              //current floor color
-            sf::Color color = ((mapPos.x % 2 == 0 && mapPos.y % 2 == 0) ||
+            color = ((mapPos.x % 2 == 0 && mapPos.y % 2 == 0) ||
                 (mapPos.x % 2 == 1 && mapPos.y % 2 == 1)) ? color1 : color2;
 
             //sf::Texture floorT = ((mapPos.x % 2 == 0 && mapPos.y % 2 == 0) ||
@@ -609,44 +450,48 @@ int main()
             // cast the ray until we hit a wall, meanwhile draw floors
             while (tile == '.') 
             {
-                if (sideDist.x < sideDist.y) {
+                if (sideDist.x < sideDist.y)
+                {
                     sideDist.x += deltaDist.x;
                     mapPos.x += step.x;
                     horizontal = true;
                     perpWallDist = (mapPos.x - rayPos.x + (1 - step.x) / 2) / rayDir.x;
                 }
-                else {
+                else
+                {
                     sideDist.y += deltaDist.y;
                     mapPos.y += step.y;
                     horizontal = false;
                     perpWallDist = (mapPos.y - rayPos.y + (1 - step.y) / 2) / rayDir.y;
                 }
 
+                // Check if the wall is beyond the maximum rendering distance
+                if (perpWallDist > RENDER_DISTANCE)
+                    break;
+
                 wallHeight = (screenHeight / perpWallDist);
-                //wallHeight2 = (screenHeight / perpWallDist) * 4;
-                //wallHeight3 = (screenHeight / perpWallDist) * 8;
 
                 // add floor
                 groundHeight = getGroundHeight(mapPos.x, mapPos.y);
 
-                lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel), color4, sf::Vector2f(385, 129)));
+                lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel), floorColor, sf::Vector2f(385, 129)));
                 groundPixel = int(wallHeight * cameraHeight + screenHeight * 0.5);
 
-                lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel), color4, sf::Vector2f(385, 129)));
+                lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel), floorColor, sf::Vector2f(385, 129)));
 
                 // add ceiling
 
-                sf::Color color_c = color3;
-                color_c.r /= 1.5;
-                color_c.g /= 1.5;
-                color_c.b /= 1.5;
+                sf::Color color_c = color;
+                color_c.r /= wallShading;
+                color_c.g /= wallShading;
+                color_c.b /= wallShading;
 
                 lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c, sf::Vector2f(385, 129)));
 
-                tile = getTile(mapPos.x, mapPos.y); 
-                heightTile = getHeight(mapPos.x, mapPos.y);
+                tile = getTile(mapPos.x, mapPos.y, currentLevel);
+                heightTile = getHeight(mapPos.x, mapPos.y, currentLevel);
 
-                ceilingPixel = int((- wallHeight * heightTile) * (1.0 - cameraHeight) + screenHeight * 0.5);
+                ceilingPixel = int((-wallHeight * heightTile) * (1.0 - cameraHeight) + screenHeight * 0.5);
                 lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c, sf::Vector2f(385, 129)));
 
                 /*if (tile == 'N')
@@ -681,64 +526,97 @@ int main()
 
             }
 
-            // calculate lowest and highest pixel to fill in current line
-            int drawStart = ceilingPixel;
-            int drawEnd = groundPixel;
-
-            
-            // get position of the wall texture in the full texture
-            int wallTextureNum = (int)wallTypes.find(tile)->second;
-
-            sf::Vector2i texture_coords(
-                wallTextureNum * texture_wall_size % texture_size,
-                wallTextureNum * texture_wall_size / texture_size * texture_wall_size
-            );
-
-
-            // calculate where the wall was hit
-            float wall_x;
-            if (horizontal) 
+            if (perpWallDist < RENDER_DISTANCE)
             {
-                wall_x = rayPos.y + perpWallDist * rayDir.y;
+                // calculate lowest and highest pixel to fill in current line
+                int drawStart = ceilingPixel;
+                int drawEnd = groundPixel;
+
+                
+                // get position of the wall texture in the full texture
+                switch (currentLevel)
+                {
+                case 0:
+                    wallTextureNum = (int)level0_wallTypes.find(tile)->second;
+                    break;
+                case 1:
+                    wallTextureNum = (int)level0_wallTypes.find(tile)->second;
+                    break;
+                case 2:
+                    wallTextureNum = (int)wallTypes.find(tile)->second;
+                    break;
+                default:
+                    break;
+                }
+
+                sf::Vector2i texture_coords(
+                    wallTextureNum * texture_wall_size % texture_size,
+                    wallTextureNum * texture_wall_size / texture_size * texture_wall_size
+                );
+
+
+                // calculate where the wall was hit
+                float wall_x;
+                if (horizontal) 
+                {
+                    wall_x = rayPos.y + perpWallDist * rayDir.y;
+                }
+                else 
+                {
+                    wall_x = rayPos.x + perpWallDist * rayDir.x;
+                }
+                wall_x -= floor(wall_x);
+
+                // get x coordinate on the wall texture
+                int tex_x = int(wall_x * float(texture_wall_size));
+
+                // flip texture if we see it on the other side of us, this prevents a mirrored effect for the texture
+                if ((horizontal && rayDir.x <= 0) || (!horizontal && rayDir.y >= 0))
+                {
+                    tex_x = texture_wall_size - tex_x - 1;
+                }
+
+                texture_coords.x += tex_x;
+
+                // illusion of shading by making horizontal walls darker
+                color = sf::Color::White;
+
+                switch (currentLevel)
+                {
+                case 0:
+                    color.r /= 1.1;
+                    color.g /= 1.1;
+                    color.b /= 1.1;
+                    break;
+                case 1:
+                    color.r /= wallShading;
+                    color.g /= wallShading;
+                    color.b /= wallShading;
+                    break;
+                default:
+                    break;
+                }
+
+                /*if (horizontal)
+                {
+                    color.r /= 2;
+                    color.g /= 2;
+                    color.b /= 2;
+                }*/
+
+
+                // add line to vertex buffer
+                    lines.append(sf::Vertex(
+                        sf::Vector2f((float)x, (float)drawStart),
+                        color,
+                        sf::Vector2f((float)texture_coords.x, (float)texture_coords.y + 1)
+                    ));
+                    lines.append(sf::Vertex(
+                        sf::Vector2f((float)x, (float)drawEnd),
+                        color,
+                        sf::Vector2f((float)texture_coords.x, (float)(texture_coords.y + texture_wall_size - 1))
+                    ));
             }
-            else 
-            {
-                wall_x = rayPos.x + perpWallDist * rayDir.x;
-            }
-            wall_x -= floor(wall_x);
-
-            // get x coordinate on the wall texture
-            int tex_x = int(wall_x * float(texture_wall_size));
-
-            // flip texture if we see it on the other side of us, this prevents a mirrored effect for the texture
-            if ((horizontal && rayDir.x <= 0) || (!horizontal && rayDir.y >= 0)) 
-            {
-                tex_x = texture_wall_size - tex_x - 1;
-            }
-
-            texture_coords.x += tex_x;
-
-            // illusion of shadows by making horizontal walls darker
-            color = sf::Color::White;
-            if (horizontal) 
-            {
-                color.r /= 2;
-                color.g /= 2;
-                color.b /= 2;
-            }
-
-
-            // add line to vertex buffer
-            lines.append(sf::Vertex(
-                sf::Vector2f((float)x, (float)drawStart),
-                color,
-                sf::Vector2f((float)texture_coords.x, (float)texture_coords.y + 1)
-            ));
-            lines.append(sf::Vertex(
-                sf::Vector2f((float)x, (float)drawEnd),
-                color,
-                sf::Vector2f((float)texture_coords.x, (float)(texture_coords.y + texture_wall_size - 1))
-            ));
         }
 
         window.clear();
