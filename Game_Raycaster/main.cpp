@@ -1,10 +1,12 @@
-﻿// Version : 0.2.2
+﻿// Version : 0.3.0
 
 #include <iostream>
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
 #include <algorithm> 
+#include <SFML/Audio.hpp>
+#include <Windows.h>
 
 #include "Maps.h" // includes data from all maps
 #include "Player.h" // includes the player class and the SFML/Graphics.hpp header file
@@ -18,7 +20,9 @@
 #define IN_GAME 1
 #define GAME_OVER 2
 
-short wallShading = 2;
+float wallShading = 1.5;
+float ceilingShading = 1.5;
+float floorShading = 1.5;
 short gameState = 0;
 short RENDER_DISTANCE = 8;
 
@@ -53,13 +57,19 @@ char getTile(int x, int y, short level)
         return level1[y * MAP_WIDTH + x];
     case 2:
         return level2[y * MAP_WIDTH + x];
+    case 3:
+        return level3[y * MAP_WIDTH + x];
+    case 4:
+        return levelRun[y * MAP_WIDTH + x];
+    case 5:
+        return levelRun[y * MAP_WIDTH + x];
     default:
         return level0[y * MAP_WIDTH + x];
         break;
     }
 }
 
-int getHeight(int x, int y, short level)
+float getHeight(int x, int y, short level)
 {
     switch (level)
     {
@@ -69,13 +79,17 @@ int getHeight(int x, int y, short level)
         return level1HeightMap[y * MAP_WIDTH + x];
     case 2:
         return level2HeightMap[y * MAP_WIDTH + x];
+    case 4:
+        return levelRunHeightMap[y * MAP_WIDTH + x];
+    case 5:
+        return level5HeightMap[y * MAP_WIDTH + x];
     default:
         return level0HeightMap[y * MAP_WIDTH + x];
         break;
     }
 }
 
-int getGroundHeight(int x, int y)
+float getGroundHeight(int x, int y)
 {
     return groundHeightMap[y * MAP_WIDTH + x];
 }
@@ -116,7 +130,8 @@ bool canMove(sf::Vector2f position, sf::Vector2f size)
     {
         for (int x = upper_left.x; x <= lower_right.x; x++) 
         {
-            if (getTile(x, y, currentLevel) != '.') {
+            if (getTile(x, y, currentLevel) != '.' && getTile(x, y, currentLevel) != ';' && getTile(x, y, currentLevel) != 'j')
+            {
                 return false;
             }
         }
@@ -142,7 +157,7 @@ void updateFPS(sf::Text &fpsText, float dt, int64_t frame_time_micro)
     {
         float fps = (float)frame_counter / dt_counter;
         frame_time_micro /= frame_counter;
-        snprintf(frameInfoString, sizeof(frameInfoString), "FPS: %3.1f, Frame time: %6ld", fps, frame_time_micro);
+        snprintf(frameInfoString, sizeof(frameInfoString), "FPS: %3.1f, Frame time: %6ld, X: %3.1f,Y: %3.1f", fps, frame_time_micro);
         fpsText.setString(frameInfoString);
         dt_counter = 0.0;
         frame_counter = 0;
@@ -183,15 +198,28 @@ void keyboardInput(bool hasFocus, Player &player, sf::Vector2f size, float dt) /
 
         if (kb::isKeyPressed(kb::A)) // shortens the render distance and darkens the wall shading
         {
-            wallShading = 6;
+            wallShading = 4;
+            ceilingShading = 4;
+            floorShading = 4;
             RENDER_DISTANCE = 4;
         }
 
         if (kb::isKeyPressed(kb::D))
         {
-            wallShading = 2;
+            wallShading = 1.5;
             RENDER_DISTANCE = 16;
         }
+
+        if (kb::isKeyPressed(kb::W) && cameraHeight < 0.95)
+            cameraHeight += 0.1 * dt;
+
+        if (kb::isKeyPressed(kb::S) && cameraHeight > 0.1)
+            cameraHeight -= 0.1 * dt;
+
+        if (kb::isKeyPressed(kb::LShift))
+            player.playerMoveSpeed = 5.0;
+        else
+            player.playerMoveSpeed = 2.5;
 
         // handle movement
         if (moveForward != 0.0f) 
@@ -239,6 +267,11 @@ int main()
 
     sf::Texture texture;
     sf::Texture level0_Textures;
+    sf::Texture ceiling;
+    sf::Texture levelRun_Textures;
+
+    sf::SoundBuffer soundBuffer;
+    sf::Sound level0_AmbientSFX;
 
     sf::Vector2f size(player.playerSize, player.playerSize); // player collision box width and height
 
@@ -263,6 +296,7 @@ int main()
 
     std::cout << "Enter screen height\n";
     std::cin >> screenHeight;
+    system("cls");
   
     if (!mapCheck()) // checks if the map is correct
     {
@@ -276,32 +310,91 @@ int main()
         return 1;
     }
 
-    //loads textures
-    if (!texture.loadFromFile("Textures/textures.png"))
-    {
-        std::cout << "Cannot open texture textures.png!\n";
-        return 1;
-    }
-
-    if (!level0_Textures.loadFromFile("Textures/level_0_textures.png"))
-    {
-        std::cout << "Cannot open texture level_0_textures.png!\n";
-        return 1;
-    }
-
-    // set render state that uses the texture
+    // loads files specific for each level and set render state that uses the texture
     switch (currentLevel)
     {
     case 0:
+
+        if (!level0_Textures.loadFromFile("Textures/level_0_textures.png"))
+        {
+            std::cout << "Cannot open texture level_0_textures.png!\n";
+            return 1;
+        }
+
+        if (!soundBuffer.loadFromFile("Data/Audio/Level0LightAmbience.mp3"))
+        {
+            std::cout << "Cannot open sound file Level0LightAmbience.mp3!\n";
+            return 1;
+        }
+
         state.texture = &level0_Textures;
+        level0_AmbientSFX.setBuffer(soundBuffer);
+        level0_AmbientSFX.play();
+        level0_AmbientSFX.setLoop(true);
+
+        wallShading = 1.1;
+        //ceilingShading = 1.5;
+        //floorShading = 1.5;
         break;
     case 1:
+        if (!level0_Textures.loadFromFile("Textures/level_0_textures.png"))
+        {
+            std::cout << "Cannot open texture level_0_textures.png!\n";
+            return 1;
+        }
+
+        if (!soundBuffer.loadFromFile("Data/Audio/Level0LightAmbience.mp3"))
+        {
+            std::cout << "Cannot open sound file Level0LightAmbience.mp3!\n";
+            return 1;
+        }
+
         state.texture = &level0_Textures;
+        level0_AmbientSFX.setBuffer(soundBuffer);
+        level0_AmbientSFX.setVolume(10);
+        level0_AmbientSFX.play();
+        level0_AmbientSFX.setLoop(true);
+
+        wallShading = 1.5;
+        ceilingShading = 1.5;
+        floorShading = 1.5;
         break;
     case 2:
+        if (!level0_Textures.loadFromFile("Textures/level_0_textures.png"))
+        {
+            std::cout << "Cannot open texture level_0_textures.png!\n";
+            return 1;
+        }
+        state.texture = &level0_Textures;
+
+        wallShading = 1.7;
+        ceilingShading = 1.7;
+        floorShading = 1.7;
+        break;
+    case 3:
+        if (!texture.loadFromFile("Textures/textures.png"))
+        {
+            std::cout << "Cannot open texture textures.png!\n";
+            return 1;
+        }
+        state.texture = &texture;
+        break;
+    case 4:
+        if (!levelRun_Textures.loadFromFile("Textures/level_Run_textures.png"))
+        {
+            std::cout << "Cannot open texture level_Run_textures.png!\n";
+            return 1;
+        }
+    case 5:
+        if (!texture.loadFromFile("Textures/textures.png"))
+        {
+            std::cout << "Cannot open texture textures.png!\n";
+            return 1;
+        }
         state.texture = &texture;
         break;
     default:
+        
         break;
     }  
 
@@ -369,7 +462,7 @@ int main()
             int groundPixel = screenHeight; // position of ground pixel on the screen
             int wallTextureNum; // number of texture from the texture file
 
-            // colors for floor tiles
+            // colors for floor and ceiling tiles
             sf::Color color;
             sf::Color color1;
             sf::Color color2;
@@ -409,53 +502,87 @@ int main()
                 sideDist.y = (mapPos.y + 1.0f - rayPos.y) * deltaDist.y;
             }
 
-            switch (currentLevel)
-            {
-            case 0: 
-                color1 = sf::Color(182, 179, 102);
-                color2 = sf::Color(255, 255, 255);
-
-                floorColor = sf::Color(178, 163, 106);
-                
-                break;
-            case 1:
-                color1 = sf::Color(154, 162, 198);
-                color2 = sf::Color(154, 162, 198); //sf::Color(129, 124, 121);
-                floorColor = sf::Color(154, 153, 149);
-                floorColor.r /= wallShading;
-                floorColor.g /= wallShading;
-                floorColor.b /= wallShading;
-                break;
-            case 2:
-                color1 = sf::Color(43, 162, 198);
-                color2 = sf::Color(96, 96, 96);
-                floorColor = sf::Color(96, 96, 96);
-                break;
-            default:
-                color1 = sf::Color(43, 162, 198);
-                color2 = sf::Color(96, 96, 96);
-
-               floorColor = sf::Color(96, 96, 96);
-                break;
-            }
-
-             //current floor color
-            color = ((mapPos.x % 2 == 0 && mapPos.y % 2 == 0) ||
-                (mapPos.x % 2 == 1 && mapPos.y % 2 == 1)) ? color1 : color2;
-
-            //sf::Texture floorT = ((mapPos.x % 2 == 0 && mapPos.y % 2 == 0) ||
-            //        (mapPos.x % 2 == 1 && mapPos.y % 2 == 1)) ? floorTexture1 : floorTexture2;
-            
 
             // cast the ray until we hit a wall, meanwhile draw floors
-            while (tile == '.') 
+            while (tile == '.' || tile == ';')
             {
+                float wall_x;
+
+                switch (currentLevel)
+                {
+                case 0:
+                    color1 = sf::Color(182, 179, 102);
+                    color2 = sf::Color(255, 255, 255);
+
+                    floorColor = sf::Color(178, 163, 106);
+                    // ceiling color shading
+                    color = ((mapPos.x % 2 == 0 && mapPos.y % 2 == 0) ||
+                        (mapPos.x % 2 == 1 && mapPos.y % 2 == 1)) ? color1 : color2;
+                    break;
+                case 1:
+                    color1 = sf::Color(154, 153, 149);
+                    color2 = sf::Color(200, 200, 200); //sf::Color(129, 124, 121);
+                    color.r /= ceilingShading;
+                    color.g /= ceilingShading;
+                    color.b /= ceilingShading;
+
+                    floorColor = sf::Color(154, 153, 149);
+                    floorColor.r /= floorShading;
+                    floorColor.g /= floorShading;
+                    floorColor.b /= floorShading;
+                    break;
+                case 2:
+                    color1 = sf::Color(154, 153, 149);
+                    color2 = sf::Color(200, 200, 200); //sf::Color(129, 124, 121);
+                    color.r /= ceilingShading;
+                    color.g /= ceilingShading;
+                    color.b /= ceilingShading;
+
+                    floorColor = sf::Color(154, 153, 149);
+                    floorColor.r /= floorShading;
+                    floorColor.g /= floorShading;
+                    floorColor.b /= floorShading;
+                    break;
+                case 3:
+                    color1 = sf::Color(43, 162, 198);
+                    color2 = sf::Color(96, 96, 96);
+                    floorColor = sf::Color(96, 96, 96);
+                    break;
+                case 4:
+                    color1 = sf::Color(154, 153, 149);
+                    color2 = sf::Color(154, 153, 149);
+                    
+                    floorColor = sf::Color(154, 153, 149);
+                    floorColor.r /= floorShading;
+                    floorColor.g /= floorShading;
+                    floorColor.b /= floorShading;
+
+                    break;
+                case 5:
+                    color1 = sf::Color(154, 153, 149);
+                    color2 = sf::Color(154, 153, 149);
+
+                    floorColor = sf::Color(154, 153, 149);
+                    floorColor.r /= floorShading;
+                    floorColor.g /= floorShading;
+                    floorColor.b /= floorShading;
+
+                    break;
+                default:
+                    color1 = sf::Color(43, 162, 198);
+                    color2 = sf::Color(96, 96, 96);
+
+                    floorColor = sf::Color(96, 96, 96);
+                    break;
+                }
+
                 if (sideDist.x < sideDist.y)
                 {
                     sideDist.x += deltaDist.x;
                     mapPos.x += step.x;
                     horizontal = true;
                     perpWallDist = (mapPos.x - rayPos.x + (1 - step.x) / 2) / rayDir.x;
+                    wall_x = rayPos.y + perpWallDist * rayDir.y;
                 }
                 else
                 {
@@ -463,36 +590,71 @@ int main()
                     mapPos.y += step.y;
                     horizontal = false;
                     perpWallDist = (mapPos.y - rayPos.y + (1 - step.y) / 2) / rayDir.y;
+                    wall_x = rayPos.x + perpWallDist * rayDir.x;
                 }
-
+               
                 // Check if the wall is beyond the maximum rendering distance
                 if (perpWallDist > RENDER_DISTANCE)
                     break;
 
+                wallTextureNum = (int)level0_wallTypes.find(tile)->second;
+
+                sf::Vector2i ceilingTextureCoords(
+                    wallTextureNum * texture_wall_size % texture_size,
+                    wallTextureNum * texture_wall_size / texture_size * texture_wall_size
+                );
+
+                if (player.position.x < 1.5 && player.position.y < 2.0)
+                    cameraHeight = 0.8;
+                else if(cameraHeight == 0.8)
+                    cameraHeight = 0.66;
+
                 wallHeight = (screenHeight / perpWallDist);
 
+                int tex_x = int(wall_x * float(texture_wall_size));
+               // ceilingTextureCoords.x += tex_x;
+
+                float ceilingTextureX = (wall_x - floor(wall_x)) * texture_wall_size;
+
                 // add floor
+
                 groundHeight = getGroundHeight(mapPos.x, mapPos.y);
+                //floorColor = sf::Color::White;
 
-                lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel), floorColor, sf::Vector2f(385, 129)));
-                groundPixel = int(wallHeight * cameraHeight + screenHeight * 0.5);
+               // lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel), floorColor, sf::Vector2f(385, 129)));
+                lines.append(sf::Vertex(
+                    sf::Vector2f((float)x, (float)groundPixel),
+                    floorColor,
+                    sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
 
-                lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel), floorColor, sf::Vector2f(385, 129)));
+                groundPixel = int(wallHeight * groundHeight * cameraHeight + screenHeight * 0.5);
 
-                // add ceiling
 
-                sf::Color color_c = color;
-                color_c.r /= wallShading;
-                color_c.g /= wallShading;
-                color_c.b /= wallShading;
+                lines.append(sf::Vertex(
+                    sf::Vector2f((float)x, (float)groundPixel),
+                    floorColor,
+                    sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)(ceilingTextureCoords.y + texture_wall_size - 1))));
 
-                lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c, sf::Vector2f(385, 129)));
+                //lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel), floorColor, sf::Vector2f(385, 129)));
 
+                // add ceiling         
+                
+                //lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c, sf::Vector2f((float)ceilingTextureCoords.x, (float)(ceilingTextureCoords.y + texture_wall_size - 1))));
+                lines.append(sf::Vertex(
+                    sf::Vector2f((float)x, (float)ceilingPixel),
+                    color,
+                    sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
+               
                 tile = getTile(mapPos.x, mapPos.y, currentLevel);
                 heightTile = getHeight(mapPos.x, mapPos.y, currentLevel);
-
                 ceilingPixel = int((-wallHeight * heightTile) * (1.0 - cameraHeight) + screenHeight * 0.5);
-                lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c, sf::Vector2f(385, 129)));
+
+                //lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c, sf::Vector2f(0, 0)));
+
+                lines.append(sf::Vertex(
+                    sf::Vector2f((float)x, (float)ceilingPixel),
+                    color,
+                    sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)(ceilingTextureCoords.y + texture_wall_size - 1))));
 
                 /*if (tile == 'N')
                 {
@@ -526,12 +688,13 @@ int main()
 
             }
 
+
             if (perpWallDist < RENDER_DISTANCE)
             {
                 // calculate lowest and highest pixel to fill in current line
+
                 int drawStart = ceilingPixel;
                 int drawEnd = groundPixel;
-
                 
                 // get position of the wall texture in the full texture
                 switch (currentLevel)
@@ -541,8 +704,21 @@ int main()
                     break;
                 case 1:
                     wallTextureNum = (int)level0_wallTypes.find(tile)->second;
+                    if (tile == '$')
+                        wallShading = 1;
+                    else
+                        wallShading = 1.5;
                     break;
                 case 2:
+                    wallTextureNum = (int)level0_wallTypes.find(tile)->second;
+                    break;
+                case 3:
+                    wallTextureNum = (int)wallTypes.find(tile)->second;
+                    break;
+                case 4:
+                    wallTextureNum = (int)levelRun_wallTypes.find(tile)->second;
+                    break;
+                case 5:
                     wallTextureNum = (int)wallTypes.find(tile)->second;
                     break;
                 default:
@@ -550,10 +726,9 @@ int main()
                 }
 
                 sf::Vector2i texture_coords(
-                    wallTextureNum * texture_wall_size % texture_size,
-                    wallTextureNum * texture_wall_size / texture_size * texture_wall_size
+                    wallTextureNum* texture_wall_size% texture_size,
+                    wallTextureNum* texture_wall_size / texture_size * texture_wall_size
                 );
-
 
                 // calculate where the wall was hit
                 float wall_x;
@@ -584,11 +759,16 @@ int main()
                 switch (currentLevel)
                 {
                 case 0:
-                    color.r /= 1.1;
-                    color.g /= 1.1;
-                    color.b /= 1.1;
+                    color.r /= 1;
+                    color.g /= 1;
+                    color.b /= 1;
                     break;
                 case 1:
+                    color.r /= wallShading;
+                    color.g /= wallShading;
+                    color.b /= wallShading;
+                    break;
+                case 2:
                     color.r /= wallShading;
                     color.g /= wallShading;
                     color.b /= wallShading;
@@ -624,6 +804,7 @@ int main()
         window.draw(fpsText);
         frame_time_micro += clock.getElapsedTime().asMicroseconds();
         window.display();
+        
     }
 
     return EXIT_SUCCESS;

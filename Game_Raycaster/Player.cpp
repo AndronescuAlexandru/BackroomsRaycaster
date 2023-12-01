@@ -9,7 +9,7 @@ Player::Player()
     plane.x = -0.66;
     plane.y = 0.0;
     playerSize = 0.375;
-    playerMoveSpeed = 5.0;
+    playerMoveSpeed = 2.5;
     playerRotateSpeed = 3.0;
 }
 
