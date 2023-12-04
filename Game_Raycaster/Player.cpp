@@ -2,8 +2,8 @@
 
 Player::Player()
 {
-    position.x = 1.5;
-    position.y = 2.0;
+    position.x = 2.5;
+    position.y = 2.5;
     direction.x = 0.0;
     direction.y = 1.0;
     plane.x = -0.66;

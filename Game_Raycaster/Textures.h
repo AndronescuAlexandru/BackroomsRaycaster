@@ -1,6 +1,6 @@
 #pragma once
 #include <unordered_map>
-
+#include<SFML/Graphics.hpp>
 
 // list of wall texture types, in order as they appear in the full texture
 
@@ -11,6 +11,7 @@ enum class TexturesLevel0_1_2 {
     ConcreteTexture2,
     ConcreteWallWithLamp,
     DirtyConcreteWallWithPipes,
+    YellowWallRedDoor
 };
 
 enum class TexturesLeveRun {
@@ -59,6 +60,7 @@ const std::unordered_map<char, TexturesLevel0_1_2> level0_wallTypes{
     {'%', TexturesLevel0_1_2::ConcreteTexture1},
     {'$', TexturesLevel0_1_2::ConcreteWallWithLamp},
     {'&', TexturesLevel0_1_2::DirtyConcreteWallWithPipes},
+    {'^', TexturesLevel0_1_2::YellowWallRedDoor},
     {'.', TexturesLevel0_1_2::YellowCarpet},
     {';', TexturesLevel0_1_2::ConcreteTexture1},
     
