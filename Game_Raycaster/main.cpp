@@ -1,4 +1,4 @@
-﻿// Version : 0.4.0
+﻿// Version : 0.5.1
 
 #include <iostream>
 #include <stdio.h>
@@ -6,6 +6,8 @@
 #include <math.h>
 #include <algorithm> 
 #include <SFML/Audio.hpp>
+#include <SFML/System/Time.hpp>
+
 #include <Windows.h>
 
 #include "Maps.h" // includes data from all maps
@@ -13,6 +15,16 @@
 #include "Textures.h" // includes all texture files
 
 //#include <SFML/Graphics.hpp>
+
+Player player;
+
+sf::SoundBuffer soundEffectsBuffer;
+sf::SoundBuffer levelEntranceSoundBuffer;
+sf::SoundBuffer footstepsBuffer;
+
+sf::Sound soundEffect;
+sf::Sound levelEntranceSound;
+sf::Sound footsteps;
 
 #define PI 3.1459
 #define GRAVITY_ACCELERATION 9.81
@@ -23,6 +35,8 @@
 
 bool keyboardPressed = false;
 bool levelChanged = false;
+bool playerIsMoving = false;
+bool footstepsPlaying = false;
 
 float wallShading = 1.5;
 float ceilingShading = 1.5;
@@ -83,15 +97,15 @@ float getHeight(int x, int y, short level)
     case 1:
         return 3;
     case 2:
-        return level_2_HeightMap[y * level_2.MAP_WIDTH + x];
+        return 1;
     case 4:
-        return levelRun_HeightMap[y * level_Run.MAP_WIDTH + x];
+        return 1;
     case 5:
         return level_5_HeightMap[y * level_5.MAP_WIDTH + x];
     case 6:
         return 3;
     default:
-        return level_0_HeightMap[y * level_0.MAP_WIDTH + x];
+        return 3;
         break;
     }
 }
@@ -99,22 +113,6 @@ float getHeight(int x, int y, short level)
 float getGroundHeight(int x, int y)
 {
     return groundHeightMap[y * level_0.MAP_WIDTH + x];
-}
-
-// checks worldMap for errors
-// returns: true on success, false on errors found
-bool mapCheck() 
-{
-    // check size
-    int mapSize = sizeof(level_0_HeightMap) - 1; // - 1 because sizeof also counts the final NULL character
-
-    if (mapSize != level_0.MAP_WIDTH * level_0.MAP_HEIGHT)
-    {
-        std::cout << "Map size " << mapSize << " is not mapWidth * mapHeight " << level_0.MAP_WIDTH * level_0.MAP_HEIGHT <<"\n";
-        return false;
-    }
-
-    return true;
 }
 
 // check if a rectangular can move to given position without colliding with walls or
@@ -184,8 +182,38 @@ float deg_to_rad(const float i_degrees)
     return PI * get_degrees(i_degrees) / 180;
 }
 
+void playSFX(short type, sf::Sound &soundEffect)
+{
+
+    switch (type)
+    {
+    case 0:
+    {
+        if (!soundEffectsBuffer.loadFromFile("Data/Audio/MetalDoorOpeningClosing.mp3"))
+            std::cout << "Could not open sound file MetalDoorOpeningClosing.mp3!\n";
+
+        soundEffect.setBuffer(soundEffectsBuffer);
+        soundEffect.play();
+
+        break;
+    }
+    case 1:
+    {
+        if (!soundEffectsBuffer.loadFromFile("Data/Audio/FallingSFX.mp3"))
+                std::cout << "Could not open sound file NoclipSFX1.mp3!\n";
+
+        soundEffect.setBuffer(soundEffectsBuffer);
+        soundEffect.play();
+        break;
+    }
+    default:
+        break;
+    }
+}
+
 void keyboardInput(bool hasFocus, Player &player, sf::Vector2f size, float dt) // handles keyboard input
 {
+    bool coordinatesRecentlyChanged = false;
     if (hasFocus)
     {
         using kb = sf::Keyboard;
@@ -198,10 +226,19 @@ void keyboardInput(bool hasFocus, Player &player, sf::Vector2f size, float dt) /
         {
             moveForward = 1.0;
         }
-        else if (kb::isKeyPressed(kb::Down)) 
-        {
-            moveForward = -1.0;
-        }
+        else 
+            if (kb::isKeyPressed(kb::Down)) 
+            {
+
+                moveForward = -1.0;
+            }
+            else
+            {
+                footstepsPlaying = false;
+                footsteps.stop();
+            }
+
+        
 
         if (kb::isKeyPressed(kb::A)) // shortens the render distance and darkens the wall shading
         {
@@ -231,9 +268,15 @@ void keyboardInput(bool hasFocus, Player &player, sf::Vector2f size, float dt) /
             cameraHeight -= 0.1 * dt;
 
         if (kb::isKeyPressed(kb::LShift))
-            player.playerMoveSpeed = 4.0;
-        else if(player.playerMoveSpeed = 4.0)
-            player.playerMoveSpeed = 2.5;
+        {
+            player.playerMoveSpeed = 3.5;
+            footsteps.setPitch(1.4);
+        }
+        else if (player.playerMoveSpeed = 4.0)
+        {
+            player.playerMoveSpeed = 2;
+            footsteps.setPitch(0.9);
+        }
 
         if (kb::isKeyPressed(kb::Space) && keyboardPressed == false)
         {
@@ -243,16 +286,57 @@ void keyboardInput(bool hasFocus, Player &player, sf::Vector2f size, float dt) /
 
         if (kb::isKeyPressed(kb::E))
         {
-            if ((int)player.position.x == 2 && (int)player.position.y == 1)
+            if (currentLevel.ID == 0 && (int)player.position.x == 2 && (int)player.position.y == 1)
             {
                 currentLevel.ID = 6;
+                playSFX(0, soundEffect);
 
                 levelChanged = true;
             }
+
+            if (currentLevel.ID == 0 && (((int)player.position.x == 1 && (int)player.position.y == 127) || ((int)player.position.x == 16 && (int)player.position.y == 126)
+                || ((int)player.position.x == 126 && (int)player.position.y == 125)))
+            {
+                currentLevel.ID = 1;
+                //playSFX(1, soundEffect);
+                levelChanged = true;
+            }
+
+            if (currentLevel.ID == 1 && (int)player.position.x == 124 && (int)player.position.y == 123 && coordinatesRecentlyChanged == false)
+            {
+                playSFX(0, soundEffect);
+                player.position.y = 126.5;
+                coordinatesRecentlyChanged = true;
+                sf::sleep(sf::milliseconds(500));
+            }
+            if (currentLevel.ID == 1 && (int)player.position.x == 124 && (int)player.position.y == 126 && coordinatesRecentlyChanged == false)
+            {
+                playSFX(0, soundEffect);
+                player.position.y = 123;
+                coordinatesRecentlyChanged = true;
+                sf::sleep(sf::milliseconds(500));
+            }
+
+            if (currentLevel.ID == 1 && (int)player.position.x == 1 && (int)player.position.y == 126)
+            {
+                currentLevel.ID = 2;
+                playSFX(0, soundEffect);
+
+                levelChanged = true;
+            }
+
         }
         
-        if (moveForward != 0.0f) 
+        if (moveForward != 0.0f)
         {
+            if (footstepsPlaying == false)
+            {
+                footsteps.play();
+                footsteps.setLoop(true);
+                footstepsPlaying = true;
+            }
+
+
             sf::Vector2f moveVec = player.direction * player.playerMoveSpeed * moveForward * dt;
 
             if (canMove(sf::Vector2f(player.position.x + moveVec.x, player.position.y), size)) {
@@ -276,6 +360,9 @@ void keyboardInput(bool hasFocus, Player &player, sf::Vector2f size, float dt) /
             rotateDirection = 1.0;
         }
 
+        if (kb::isKeyPressed(kb::Escape))
+            gameState = MAIN_MENU;
+
         // handle rotation
         if (rotateDirection != 0.0) 
         {
@@ -283,16 +370,18 @@ void keyboardInput(bool hasFocus, Player &player, sf::Vector2f size, float dt) /
             player.direction = rotateVec(player.direction, rotation);
             player.plane = rotateVec(player.plane, rotation);
         }
+
+        coordinatesRecentlyChanged = false;
     }
 }
 
-void loadLevel(sf::RenderStates &state, sf::SoundBuffer& soundBuffer, sf::Sound& AmbientSFX, sf::Color& color, sf::Color& color1, sf::Color& color2, sf::Color& floorColor)
+void loadLevel(sf::RenderWindow &window,sf::RenderStates &state, sf::SoundBuffer& soundBuffer, sf::Sound& AmbientSFX, sf::Color& color, sf::Color& color1, sf::Color& color2, sf::Color& floorColor)
 {
     // loads files specific for each level and set render state that uses the texture
     switch (currentLevel.ID)
     {
     case 0:
-        if (!level_0.Textures.loadFromFile("Textures/level_0_textures.png"))
+        if (!level_0.Textures.loadFromFile("Data/Textures/level_0_textures.png"))
         {
             std::cout << "Cannot open texture level_0_textures.png!\n";
         }
@@ -302,12 +391,18 @@ void loadLevel(sf::RenderStates &state, sf::SoundBuffer& soundBuffer, sf::Sound&
             std::cout << "Cannot open sound file Level0LightAmbience.mp3!\n";
         }
 
+        if (!footstepsBuffer.loadFromFile("Data/Audio/CarpetFootsteps.mp3"))
+            std::cout << "Could not open sound file CarpetFootsteps2.mp3!\n";
+
+        footsteps.setBuffer(footstepsBuffer);
+
         currentLevel.MAP_HEIGHT = level_0.MAP_HEIGHT;
         currentLevel.MAP_WIDTH = level_0.MAP_WIDTH;
 
         state.texture = &level_0.Textures;
 
         AmbientSFX.setBuffer(soundBuffer);
+        AmbientSFX.setVolume(50);
         AmbientSFX.play();
         AmbientSFX.setLoop(true);
 
@@ -318,11 +413,27 @@ void loadLevel(sf::RenderStates &state, sf::SoundBuffer& soundBuffer, sf::Sound&
 
         floorColor = sf::Color(178, 163, 106);
 
+        player.position.x = 1.5;
+        player.position.y = 1.5;
+
         //ceilingShading = 1.5;
         //floorShading = 1.5;
         break;
     case 1:
-        if (!level_1.Textures.loadFromFile("Textures/level_0_textures.png"))
+        window.clear(sf::Color::Black);
+        window.display();
+
+        if (!levelEntranceSoundBuffer.loadFromFile("Data/Audio/FallingSFX.mp3"))
+        {
+            std::cout << "Cannot open sound file Level0_01EntranceSFX.mp3!\n";
+        }
+
+        levelEntranceSound.setBuffer(levelEntranceSoundBuffer);
+        levelEntranceSound.play();
+
+        sf::sleep(sf::seconds(2));
+
+        if (!level_1.Textures.loadFromFile("Data/Textures/level_0_textures.png"))
         {
             std::cout << "Cannot open texture level_0_textures.png!\n";
         }
@@ -331,6 +442,11 @@ void loadLevel(sf::RenderStates &state, sf::SoundBuffer& soundBuffer, sf::Sound&
         {
             std::cout << "Cannot open sound file Level0LightAmbience.mp3!\n";
         }
+
+        if (!footstepsBuffer.loadFromFile("Data/Audio/ConcreteFootsteps.mp3"))
+            std::cout << "Could not open sound file ConcreteFootsteps.mp3!\n";
+
+        footsteps.setBuffer(footstepsBuffer);
 
         currentLevel.MAP_HEIGHT = level_1.MAP_HEIGHT;
         currentLevel.MAP_WIDTH = level_1.MAP_WIDTH;
@@ -357,24 +473,32 @@ void loadLevel(sf::RenderStates &state, sf::SoundBuffer& soundBuffer, sf::Sound&
         floorColor.g /= floorShading;
         floorColor.b /= floorShading;
 
+        //player.position.x = 1.5;
+        //player.position.y = 1.5;
+
         break;
     case 2:
-        if (!level_2.Textures.loadFromFile("Textures/level_0_textures.png"))
+        if (!level_2.Textures.loadFromFile("Data/Textures/level_0_textures.png"))
         {
             std::cout << "Cannot open texture level_0_textures.png!\n";
         }
+
+        if (!footstepsBuffer.loadFromFile("Data/Audio/ConcreteFootsteps.mp3"))
+            std::cout << "Could not open sound file ConcreteFootsteps.mp3!\n";
+
+        footsteps.setBuffer(footstepsBuffer);
 
         currentLevel.MAP_HEIGHT = level_2.MAP_HEIGHT;
         currentLevel.MAP_WIDTH = level_2.MAP_WIDTH;
 
         state.texture = &level_2.Textures;
 
-        wallShading = 1.7;
-        ceilingShading = 1.7;
-        floorShading = 1.7;
+        wallShading = 2.5;
+        ceilingShading = 2.5;
+        floorShading = 2.5;
 
         color1 = sf::Color(154, 153, 149);
-        color2 = sf::Color(200, 200, 200); //sf::Color(129, 124, 121);
+        color2 = sf::Color(154, 153, 149); //sf::Color(129, 124, 121);
         color.r /= ceilingShading;
         color.g /= ceilingShading;
         color.b /= ceilingShading;
@@ -384,9 +508,12 @@ void loadLevel(sf::RenderStates &state, sf::SoundBuffer& soundBuffer, sf::Sound&
         floorColor.g /= floorShading;
         floorColor.b /= floorShading;
 
+        player.position.x = 1.5;
+        player.position.y = 1.5;
+
         break;
     case 3:
-        if (!level_3.Textures.loadFromFile("Textures/textures.png"))
+        if (!level_3.Textures.loadFromFile("Data/Textures/textures.png"))
         {
             std::cout << "Cannot open texture textures.png!\n";
         }
@@ -402,7 +529,7 @@ void loadLevel(sf::RenderStates &state, sf::SoundBuffer& soundBuffer, sf::Sound&
 
         break;
     case 4:
-        if (!level_Run.Textures.loadFromFile("Textures/level_Run_textures.png"))
+        if (!level_Run.Textures.loadFromFile("Data/Textures/level_Run_textures.png"))
         {
             std::cout << "Cannot open texture level_Run_textures.png!\n";
         }
@@ -411,6 +538,11 @@ void loadLevel(sf::RenderStates &state, sf::SoundBuffer& soundBuffer, sf::Sound&
         {
             std::cout << "Cannot open sound file Level0LightAmbience.mp3!\n";
         }
+
+        if (!footstepsBuffer.loadFromFile("Data/Audio/ConcreteFootsteps.mp3"))
+            std::cout << "Could not open sound file ConcreteFootsteps.mp3!\n";
+
+        footsteps.setBuffer(footstepsBuffer);
 
         currentLevel.MAP_HEIGHT = level_Run.MAP_HEIGHT;
         currentLevel.MAP_WIDTH = level_Run.MAP_WIDTH;
@@ -431,10 +563,15 @@ void loadLevel(sf::RenderStates &state, sf::SoundBuffer& soundBuffer, sf::Sound&
 
         break;
     case 5:
-        if (!level_5.Textures.loadFromFile("Textures/textures.png"))
+        if (!level_5.Textures.loadFromFile("Data/Textures/textures.png"))
         {
             std::cout << "Cannot open texture textures.png!\n";
         }
+
+        if (!footstepsBuffer.loadFromFile("Data/Audio/CarpetFootsteps.mp3"))
+            std::cout << "Could not open sound file CarpetFootsteps2.mp3!\n";
+
+        footsteps.setBuffer(footstepsBuffer);
 
         currentLevel.MAP_HEIGHT = level_5.MAP_HEIGHT;
         currentLevel.MAP_WIDTH = level_5.MAP_WIDTH;
@@ -451,20 +588,36 @@ void loadLevel(sf::RenderStates &state, sf::SoundBuffer& soundBuffer, sf::Sound&
         break;
     case 6:
 
-        if (!level_0_0_1.Textures.loadFromFile("Textures/level_0_textures.png"))
+        if (!level_0_0_1.Textures.loadFromFile("Data/Textures/level_0_textures.png"))
         {
             std::cout << "Cannot open texture level_0_textures.png!\n";
         } 
 
+        if (!levelEntranceSoundBuffer.loadFromFile("Data/Audio/Level0_01EntranceSFX.mp3"))
+        {
+            std::cout << "Cannot open sound file Level0_01EntranceSFX.mp3!\n";
+        }
+        
         if (!soundBuffer.loadFromFile("Data/Audio/Level0LightAmbience.mp3"))
         {
             std::cout << "Cannot open sound file Level0LightAmbience.mp3!\n";
         }
 
+        if (!footstepsBuffer.loadFromFile("Data/Audio/CarpetFootsteps.mp3"))
+            std::cout << "Could not open sound file CarpetFootsteps2.mp3!\n";
+
+        footsteps.setBuffer(footstepsBuffer);
+
+        player.position.x = 1.6;
+        player.position.y = 2.5;
+
         currentLevel.MAP_HEIGHT = level_0_0_1.MAP_HEIGHT;
         currentLevel.MAP_WIDTH = level_0_0_1.MAP_WIDTH;
 
         state.texture = &level_0_0_1.Textures;
+
+        levelEntranceSound.setBuffer(levelEntranceSoundBuffer);
+        levelEntranceSound.play();
 
         AmbientSFX.setBuffer(soundBuffer);
         AmbientSFX.play();
@@ -486,30 +639,21 @@ void loadLevel(sf::RenderStates &state, sf::SoundBuffer& soundBuffer, sf::Sound&
 
         break;
     default:
-        if (!level_5.Textures.loadFromFile("Textures/textures.png"))
-        {
-            std::cout << "Cannot open texture textures.png!\n";
-        }
+        if (!footstepsBuffer.loadFromFile("Data/Audio/CarpetFootsteps.mp3"))
+            std::cout << "Could not open sound file CarpetFootsteps2.mp3!\n";
 
-        currentLevel.MAP_HEIGHT = level_5.MAP_HEIGHT;
-        currentLevel.MAP_WIDTH = level_5.MAP_WIDTH;
+        footsteps.setBuffer(footstepsBuffer);
 
-        state.texture = &level_5.Textures;
-
-        color1 = sf::Color(43, 162, 198);
-        color2 = sf::Color(96, 96, 96);
-
-        floorColor = sf::Color(96, 96, 96);
+        std::cout << "Could not load any levels!";
 
         break;
     }
 }
 
+
 int main() 
 {
     bool hasFocus = true;
-
-    Player player;
 
     // colors for floor and ceiling tiles
     sf::Color color;
@@ -522,8 +666,10 @@ int main()
 
     sf::SoundBuffer soundBuffer;
     sf::SoundBuffer entitySoundBuffer;
+
     sf::Sound AmbientSFX;
     sf::Sound EntitySFX;
+
 
     sf::Vector2f size(player.playerSize, player.playerSize); // player collision box width and height
 
@@ -536,21 +682,8 @@ int main()
     sf::Clock clock; // timer
 
     int64_t frame_time_micro = 0; // time needed to draw frames in microseconds
-
-    std::cout << "Enter level choice\n";
-    std::cin >> currentLevel.ID;
-
-    std::cout << "Enter draw distance\n";
-    std::cin >> RENDER_DISTANCE;
-
-    std::cout << "Enter screen width\n";
-    std::cin >> screenWidth;
-
-    std::cout << "Enter screen height\n";
-    std::cin >> screenHeight;
-    system("cls");
   
-    if (!font.loadFromFile("Fonts/arial.ttf")) //loads font
+    if (!font.loadFromFile("Data/Fonts/arial.ttf")) //loads font
     {
         std::cout << "Cannot open font arial.ttf!\n";
         return 1;
@@ -562,9 +695,8 @@ int main()
         return 1;
     }
 
-    EntitySFX.setBuffer(entitySoundBuffer);
 
-    loadLevel(state, soundBuffer, AmbientSFX, color, color1, color2, floorColor);
+    EntitySFX.setBuffer(entitySoundBuffer);
 
     sf::RenderWindow window(sf::VideoMode(screenWidth, screenHeight), "Backrooms"); // create window after loading everything up
 
@@ -574,27 +706,50 @@ int main()
 
     while (window.isOpen()) 
     {
-        float dt = clock.restart().asSeconds();
-        sf::Event event;
-
-        sf::View view = window.getDefaultView();
-        
-        updateFPS(fpsText, dt, frame_time_micro);
-
-        if (levelChanged == true)
+        switch (gameState)
         {
-            AmbientSFX.stop();
-            loadLevel(state, soundBuffer, AmbientSFX, color, color1, color2, floorColor);
-            levelChanged = false;
+        case MAIN_MENU:
+        {
+            std::cout << "Enter level choice\n";
+            std::cin >> currentLevel.ID;
+
+            std::cout << "Enter draw distance\n";
+            std::cin >> RENDER_DISTANCE;
+
+            std::cout << "Enter screen width\n";
+            std::cin >> screenWidth;
+
+            std::cout << "Enter screen height\n";
+            std::cin >> screenHeight;
+
+            gameState = IN_GAME;
+            loadLevel(window, state, soundBuffer, AmbientSFX, color, color1, color2, floorColor);
+
+            break;
         }
-
-        // handle SFML events
-
-        while (window.pollEvent(event)) 
+        case IN_GAME:
         {
+            float dt = clock.restart().asSeconds();
+            sf::Event event;
 
-            switch (event.type) 
+            sf::View view = window.getDefaultView();
+
+            updateFPS(fpsText, dt, frame_time_micro);
+
+            if (levelChanged == true)
             {
+                AmbientSFX.stop();
+                loadLevel(window, state, soundBuffer, AmbientSFX, color, color1, color2, floorColor);
+                levelChanged = false;
+            }
+
+            // handle SFML events
+
+            while (window.pollEvent(event))
+            {
+
+                switch (event.type)
+                {
                 case sf::Event::Closed:
                     window.close();
                     break;
@@ -614,295 +769,293 @@ int main()
                     break;
                 default:
                     break;
-            }
-        }
-
-        keyboardInput(hasFocus, player, size, dt);
-
-        lines.resize(0);
-
-        if (cameraHeight > 0.66 && !keyboardPressed)
-            cameraHeight -= 0.1 * GRAVITY_ACCELERATION * dt;
-
-        if (player.position.x < 1.5 && player.position.y < 2.0)
-        {
-            cameraHeight = 0.8;
-            EntitySFX.play();
-        }
-
-        if ((int)player.position.y == 245 && currentLevel.ID == 6)
-            player.position.y = 200;
-
-        // loop through vertical screen lines, draw a line of wall for each
-        for (int x = 0; x < screenWidth; x++) 
-        {
-            char tile = '.'; // tile type that got hit
-            bool horizontal; // did we hit a horizontal side? Otherwise it's vertical
-
-            float perpWallDist = 0.0; // wall distance, projected on camera direction
-
-            int heightTile = 1;
-            int groundHeight = 1;
-            int wallHeight; // height of wall to draw on the screen at each distance
-
-            int ceilingPixel = 0; // position of ceiling pixel on the screen
-            int groundPixel = screenHeight; // position of ground pixel on the screen
-            int wallTextureNum; // number of texture from the texture file
-
-            sf::Vector2i step; // what direction to step in (+1 or -1 for each dimension)
-            sf::Vector2f sideDist; // distance from current position to next gridline, for x and y separately
-
-            // ray to emit
-            float cameraX = 2 * x / (float)screenWidth - 1.0; // x in camera space (between -1 and +1)
-            sf::Vector2f rayPos = player.position;
-            sf::Vector2f rayDir = player.direction + player.plane * cameraX;
-            sf::Vector2i mapPos(rayPos); // which box of the map we're in
-
-            // calculate distance traversed between each grid line for x and y based on direction
-            sf::Vector2f deltaDist(
-                sqrt(1.0f + (rayDir.y * rayDir.y) / (rayDir.x * rayDir.x)),
-                sqrt(1.0f + (rayDir.x * rayDir.x) / (rayDir.y * rayDir.y))
-            );
-
-            // calculate step and initial sideDist
-            if (rayDir.x < 0.0) {
-                step.x = -1;
-                sideDist.x = (rayPos.x - mapPos.x) * deltaDist.x;
-            }
-            else {
-                step.x = 1;
-                sideDist.x = (mapPos.x + 1.0f - rayPos.x) * deltaDist.x;
-            }
-            if (rayDir.y < 0.0f) {
-                step.y = -1;
-                sideDist.y = (rayPos.y - mapPos.y) * deltaDist.y;
-            }
-            else {
-                step.y = 1;
-                sideDist.y = (mapPos.y + 1.0f - rayPos.y) * deltaDist.y;
+                }
             }
 
+            keyboardInput(hasFocus, player, size, dt);
 
-            // cast the ray until we hit a wall, meanwhile draw floors
-            while (tile == '.' || tile == ';')
+
+            //printf("X: %f Y: %f player dir : %f", player.position.x, player.position.y, player.direction);
+            //system("cls");
+
+            lines.resize(0);
+
+            if (cameraHeight > 0.67 && !keyboardPressed)
+                cameraHeight -= 0.1 * GRAVITY_ACCELERATION * dt;
+
+            if ((int)player.position.y == 245 && currentLevel.ID == 6)
+                player.position.y = 200;
+
+            // loop through vertical screen lines, draw a line of wall for each
+            for (int x = 0; x < screenWidth; x++)
             {
-                float wall_x;
+                char tile = '.'; // tile type that got hit
+                bool horizontal; // did we hit a horizontal side? Otherwise it's vertical
 
-                color = ((mapPos.x % 2 == 0 && mapPos.y % 2 == 0) || (mapPos.x % 2 == 1 && mapPos.y % 2 == 1)) ? color1 : color2;
+                float perpWallDist = 0.0; // wall distance, projected on camera direction
 
-                if (sideDist.x < sideDist.y)
-                {
-                    sideDist.x += deltaDist.x;
-                    mapPos.x += step.x;
-                    horizontal = true;
-                    perpWallDist = (mapPos.x - rayPos.x + (1 - step.x) / 2) / rayDir.x;
-                    wall_x = rayPos.y + perpWallDist * rayDir.y;
-                }
-                else
-                {
-                    sideDist.y += deltaDist.y;
-                    mapPos.y += step.y;
-                    horizontal = false;
-                    perpWallDist = (mapPos.y - rayPos.y + (1 - step.y) / 2) / rayDir.y;
-                    wall_x = rayPos.x + perpWallDist * rayDir.x;
-                }
-               
-                // Check if the wall is beyond the maximum rendering distance
-                if (perpWallDist > RENDER_DISTANCE)
-                    break;
+                int heightTile = 1;
+                int groundHeight = 1;
+                int wallHeight; // height of wall to draw on the screen at each distance
 
-                wallTextureNum = (int)level0_wallTypes.find(tile)->second;
+                int ceilingPixel = 0; // position of ceiling pixel on the screen
+                int groundPixel = screenHeight; // position of ground pixel on the screen
+                int wallTextureNum; // number of texture from the texture file
 
-                sf::Vector2i ceilingTextureCoords(
-                    wallTextureNum * texture_wall_size % texture_size,
-                    wallTextureNum * texture_wall_size / texture_size * texture_wall_size
+                sf::Vector2i step; // what direction to step in (+1 or -1 for each dimension)
+                sf::Vector2f sideDist; // distance from current position to next gridline, for x and y separately
+
+                // ray to emit
+                float cameraX = 2 * x / (float)screenWidth - 1.0; // x in camera space (between -1 and +1)
+                sf::Vector2f rayPos = player.position;
+                sf::Vector2f rayDir = player.direction + player.plane * cameraX;
+                sf::Vector2i mapPos(rayPos); // which box of the map we're in
+
+                // calculate distance traversed between each grid line for x and y based on direction
+                sf::Vector2f deltaDist(
+                    sqrt(1.0f + (rayDir.y * rayDir.y) / (rayDir.x * rayDir.x)),
+                    sqrt(1.0f + (rayDir.x * rayDir.x) / (rayDir.y * rayDir.y))
                 );
 
-                wallHeight = (screenHeight / perpWallDist);
-
-                int tex_x = int(wall_x * float(texture_wall_size));
-               // ceilingTextureCoords.x += tex_x;
-
-                float ceilingTextureX = (wall_x - floor(wall_x)) * texture_wall_size;
-
-                // add floor
-
-                //groundHeight = getGroundHeight(mapPos.x, mapPos.y);
-                //floorColor = sf::Color::White;
-
-               // lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel), floorColor, sf::Vector2f(385, 129)));
-                lines.append(sf::Vertex(
-                    sf::Vector2f((float)x, (float)groundPixel),
-                    floorColor,
-                    sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
-
-                groundPixel = int(wallHeight * cameraHeight + screenHeight * 0.5);
-
-
-                lines.append(sf::Vertex(
-                    sf::Vector2f((float)x, (float)groundPixel),
-                    floorColor,
-                    sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)(ceilingTextureCoords.y + texture_wall_size - 1))));
-
-                //lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel), floorColor, sf::Vector2f(385, 129)));
-
-                // add ceiling         
-                
-                //lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c, sf::Vector2f((float)ceilingTextureCoords.x, (float)(ceilingTextureCoords.y + texture_wall_size - 1))));
-                lines.append(sf::Vertex(
-                    sf::Vector2f((float)x, (float)ceilingPixel),
-                    color,
-                    sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
-               
-                tile = getTile(mapPos.x, mapPos.y, currentLevel.ID);
-                heightTile = getHeight(mapPos.x, mapPos.y, currentLevel.ID);
-                ceilingPixel = int((-wallHeight * heightTile) * (1.0 - cameraHeight) + screenHeight * 0.5);
-
-                //lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c, sf::Vector2f(0, 0)));
-
-                lines.append(sf::Vertex(
-                    sf::Vector2f((float)x, (float)ceilingPixel),
-                    color,
-                    sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)(ceilingTextureCoords.y + texture_wall_size - 1))));
-
-                /*if (tile == 'N')
-                {
-                    ceilingPixel = int(-wallHeight2 * (1.0 - cameraHeight) + screenHeight * 0.5);
-                    color_c = sf::Color::Transparent;
-
-                    lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel * 1.2), color_c,sf::Vector2f(385, 129))); // also adds floor reflexion
+                // calculate step and initial sideDist
+                if (rayDir.x < 0.0) {
+                    step.x = -1;
+                    sideDist.x = (rayPos.x - mapPos.x) * deltaDist.x;
                 }
-                else
-                    if (tile == '!')
-                    {
-                        ceilingPixel = int(-wallHeight * (1.0 - cameraHeight) + screenHeight * 0.5);
+                else {
+                    step.x = 1;
+                    sideDist.x = (mapPos.x + 1.0f - rayPos.x) * deltaDist.x;
+                }
+                if (rayDir.y < 0.0f) {
+                    step.y = -1;
+                    sideDist.y = (rayPos.y - mapPos.y) * deltaDist.y;
+                }
+                else {
+                    step.y = 1;
+                    sideDist.y = (mapPos.y + 1.0f - rayPos.y) * deltaDist.y;
+                }
 
-                        lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c,sf::Vector2f(385, 129))); // also adds floor reflexion
+
+                // cast the ray until we hit a wall, meanwhile draw floors
+                while (tile == '.' || tile == ';')
+                {
+                    float wall_x;
+
+                    color = ((mapPos.x % 2 == 0 && mapPos.y % 2 == 0) || (mapPos.x % 2 == 1 && mapPos.y % 2 == 1)) ? color1 : color2;
+
+                    if (sideDist.x < sideDist.y)
+                    {
+                        sideDist.x += deltaDist.x;
+                        mapPos.x += step.x;
+                        horizontal = true;
+                        perpWallDist = (mapPos.x - rayPos.x + (1 - step.x) / 2) / rayDir.x;
+                        wall_x = rayPos.y + perpWallDist * rayDir.y;
                     }
                     else
-                        if (tile == 'M')
-                        {
-                            ceilingPixel = int(-wallHeight3 * (1.0 - cameraHeight) + screenHeight * 0.5);
-                            lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c, sf::Vector2f(385, 129)));
-                        }
-                        else
+                    {
+                        sideDist.y += deltaDist.y;
+                        mapPos.y += step.y;
+                        horizontal = false;
+                        perpWallDist = (mapPos.y - rayPos.y + (1 - step.y) / 2) / rayDir.y;
+                        wall_x = rayPos.x + perpWallDist * rayDir.x;
+                    }
+
+                    // Check if the wall is beyond the maximum rendering distance
+                    if (perpWallDist > RENDER_DISTANCE)
+                        break;
+
+                    wallTextureNum = (int)level0_wallTypes.find(tile)->second;
+
+                    sf::Vector2i ceilingTextureCoords(
+                        wallTextureNum * texture_wall_size % texture_size,
+                        wallTextureNum * texture_wall_size / texture_size * texture_wall_size
+                    );
+
+                    wallHeight = (screenHeight / perpWallDist);
+
+                    int tex_x = int(wall_x * float(texture_wall_size));
+                    // ceilingTextureCoords.x += tex_x;
+
+                    float ceilingTextureX = (wall_x - floor(wall_x)) * texture_wall_size;
+
+                    // add floor
+
+                    //groundHeight = getGroundHeight(mapPos.x, mapPos.y);
+                    //floorColor = sf::Color::White;
+
+                   // lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel), floorColor, sf::Vector2f(385, 129)));
+                    lines.append(sf::Vertex(
+                        sf::Vector2f((float)x, (float)groundPixel),
+                        floorColor,
+                        sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
+
+                    groundPixel = int(wallHeight * cameraHeight + screenHeight * 0.5);
+
+
+                    lines.append(sf::Vertex(
+                        sf::Vector2f((float)x, (float)groundPixel),
+                        floorColor,
+                        sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)(ceilingTextureCoords.y + texture_wall_size - 1))));
+
+                    //lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel), floorColor, sf::Vector2f(385, 129)));
+
+                    // add ceiling         
+
+                    //lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c, sf::Vector2f((float)ceilingTextureCoords.x, (float)(ceilingTextureCoords.y + texture_wall_size - 1))));
+                    lines.append(sf::Vertex(
+                        sf::Vector2f((float)x, (float)ceilingPixel),
+                        color,
+                        sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
+
+                    tile = getTile(mapPos.x, mapPos.y, currentLevel.ID);
+                    heightTile = getHeight(mapPos.x, mapPos.y, currentLevel.ID);
+                    ceilingPixel = int((-wallHeight * heightTile) * (1.0 - cameraHeight) + screenHeight * 0.5);
+
+                    //lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c, sf::Vector2f(0, 0)));
+
+                    lines.append(sf::Vertex(
+                        sf::Vector2f((float)x, (float)ceilingPixel),
+                        color,
+                        sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)(ceilingTextureCoords.y + texture_wall_size - 1))));
+
+                    /*if (tile == 'N')
+                    {
+                        ceilingPixel = int(-wallHeight2 * (1.0 - cameraHeight) + screenHeight * 0.5);
+                        color_c = sf::Color::Transparent;
+
+                        lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel * 1.2), color_c,sf::Vector2f(385, 129))); // also adds floor reflexion
+                    }
+                    else
+                        if (tile == '!')
                         {
                             ceilingPixel = int(-wallHeight * (1.0 - cameraHeight) + screenHeight * 0.5);
-                            lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c,sf::Vector2f(385, 129)));
-                        }*/
 
-                // change color and find tile type
+                            lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c,sf::Vector2f(385, 129))); // also adds floor reflexion
+                        }
+                        else
+                            if (tile == 'M')
+                            {
+                                ceilingPixel = int(-wallHeight3 * (1.0 - cameraHeight) + screenHeight * 0.5);
+                                lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c, sf::Vector2f(385, 129)));
+                            }
+                            else
+                            {
+                                ceilingPixel = int(-wallHeight * (1.0 - cameraHeight) + screenHeight * 0.5);
+                                lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c,sf::Vector2f(385, 129)));
+                            }*/
 
-                   color = (color == color1) ? color2 : color1;
+                            // change color and find tile type
 
-            }
+                    color = (color == color1) ? color2 : color1;
+
+                }
 
 
-            if (perpWallDist < RENDER_DISTANCE)
-            {
-                // calculate lowest and highest pixel to fill in current line
-
-                int drawStart = ceilingPixel;
-                int drawEnd = groundPixel;
-                
-                // get position of the wall texture in the full texture
-                switch (currentLevel.ID)
+                if (perpWallDist < RENDER_DISTANCE)
                 {
-                case 0:
-                    wallTextureNum = (int)level0_wallTypes.find(tile)->second;
-                    break;
-                case 1:
-                    wallTextureNum = (int)level0_wallTypes.find(tile)->second;
-                    if (tile == '$')
-                        wallShading = 1;
+                    // calculate lowest and highest pixel to fill in current line
+
+                    int drawStart = ceilingPixel;
+                    int drawEnd = groundPixel;
+
+                    // get position of the wall texture in the full texture
+                    switch (currentLevel.ID)
+                    {
+                    case 0:
+                        wallTextureNum = (int)level0_wallTypes.find(tile)->second;
+                        break;
+                    case 1:
+                        wallTextureNum = (int)level0_wallTypes.find(tile)->second;
+                        if (tile == '$')
+                            wallShading = 1;
+                        else
+                            wallShading = 1.5;
+                        break;
+                    case 2:
+                        wallTextureNum = (int)level0_wallTypes.find(tile)->second;
+                        break;
+                    case 3:
+                        wallTextureNum = (int)wallTypes.find(tile)->second;
+                        break;
+                    case 4:
+                        wallTextureNum = (int)levelRun_wallTypes.find(tile)->second;
+                        break;
+                    case 5:
+                        wallTextureNum = (int)wallTypes.find(tile)->second;
+                        break;
+                    case 6:
+                        wallTextureNum = (int)level0_wallTypes.find(tile)->second;
+                        break;
+                    default:
+                        break;
+                    }
+
+                    sf::Vector2i texture_coords(
+                        wallTextureNum * texture_wall_size % texture_size,
+                        wallTextureNum * texture_wall_size / texture_size * texture_wall_size
+                    );
+
+                    // calculate where the wall was hit
+                    float wall_x;
+                    if (horizontal)
+                    {
+                        wall_x = rayPos.y + perpWallDist * rayDir.y;
+                    }
                     else
-                        wallShading = 1.5;
-                    break;
-                case 2:
-                    wallTextureNum = (int)level0_wallTypes.find(tile)->second;
-                    break;
-                case 3:
-                    wallTextureNum = (int)wallTypes.find(tile)->second;
-                    break;
-                case 4:
-                    wallTextureNum = (int)levelRun_wallTypes.find(tile)->second;
-                    break;
-                case 5:
-                    wallTextureNum = (int)wallTypes.find(tile)->second;
-                    break;
-                case 6:
-                    wallTextureNum = (int)level0_wallTypes.find(tile)->second;
-                    break;
-                default:
-                    break;
-                }
+                    {
+                        wall_x = rayPos.x + perpWallDist * rayDir.x;
+                    }
+                    wall_x -= floor(wall_x);
 
-                sf::Vector2i texture_coords(
-                    wallTextureNum* texture_wall_size% texture_size,
-                    wallTextureNum* texture_wall_size / texture_size * texture_wall_size
-                );
+                    // get x coordinate on the wall texture
+                    int tex_x = int(wall_x * float(texture_wall_size));
 
-                // calculate where the wall was hit
-                float wall_x;
-                if (horizontal) 
-                {
-                    wall_x = rayPos.y + perpWallDist * rayDir.y;
-                }
-                else 
-                {
-                    wall_x = rayPos.x + perpWallDist * rayDir.x;
-                }
-                wall_x -= floor(wall_x);
+                    // flip texture if we see it on the other side of us, this prevents a mirrored effect for the texture
+                    if ((horizontal && rayDir.x <= 0) || (!horizontal && rayDir.y >= 0))
+                    {
+                        tex_x = texture_wall_size - tex_x - 1;
+                    }
 
-                // get x coordinate on the wall texture
-                int tex_x = int(wall_x * float(texture_wall_size));
+                    texture_coords.x += tex_x;
 
-                // flip texture if we see it on the other side of us, this prevents a mirrored effect for the texture
-                if ((horizontal && rayDir.x <= 0) || (!horizontal && rayDir.y >= 0))
-                {
-                    tex_x = texture_wall_size - tex_x - 1;
-                }
+                    // illusion of shading by making horizontal walls darker
+                    color = sf::Color::White;
 
-                texture_coords.x += tex_x;
+                    switch (currentLevel.ID)
+                    {
+                    case 0:
+                        color.r /= 1;
+                        color.g /= 1;
+                        color.b /= 1;
+                        break;
+                    case 1:
+                        color.r /= wallShading;
+                        color.g /= wallShading;
+                        color.b /= wallShading;
+                        break;
+                    case 2:
+                        color.r /= wallShading;
+                        color.g /= wallShading;
+                        color.b /= wallShading;
+                        break;
+                    case 6:
+                        color.r /= wallShading;
+                        color.g /= wallShading;
+                        color.b /= wallShading;
+                        break;
+                    default:
+                        break;
+                    }
 
-                // illusion of shading by making horizontal walls darker
-                color = sf::Color::White;
-
-                switch (currentLevel.ID)
-                {
-                case 0:
-                    color.r /= 1;
-                    color.g /= 1;
-                    color.b /= 1;
-                    break;
-                case 1:
-                    color.r /= wallShading;
-                    color.g /= wallShading;
-                    color.b /= wallShading;
-                    break;
-                case 2:
-                    color.r /= wallShading;
-                    color.g /= wallShading;
-                    color.b /= wallShading;
-                    break;
-                case 6:
-                    color.r /= wallShading;
-                    color.g /= wallShading;
-                    color.b /= wallShading;
-                    break;
-                default:
-                    break;
-                }
-
-                /*if (horizontal)
-                {
-                    color.r /= 2;
-                    color.g /= 2;
-                    color.b /= 2;
-                }*/
+                    /*if (horizontal)
+                    {
+                        color.r /= 2;
+                        color.g /= 2;
+                        color.b /= 2;
+                    }*/
 
 
-                // add line to vertex buffer
+                    // add line to vertex buffer
                     lines.append(sf::Vertex(
                         sf::Vector2f((float)x, (float)drawStart),
                         color,
@@ -913,16 +1066,26 @@ int main()
                         color,
                         sf::Vector2f((float)texture_coords.x, (float)(texture_coords.y + texture_wall_size - 1))
                     ));
+                }
             }
-        }
 
-        window.clear();
-        window.draw(lines, state);
-        window.draw(fpsText);
-        frame_time_micro += clock.getElapsedTime().asMicroseconds();
-        window.display();
+            window.clear();
+            window.draw(lines, state);
+            window.draw(fpsText);
+            frame_time_micro += clock.getElapsedTime().asMicroseconds();
+            window.display();
+
+            break;
+        }
+        case GAME_OVER:
+        {
+            break;
+        }
+        default:
+            break;
+        }
         
     }
 
-    return EXIT_SUCCESS;
+    return 0;
 }

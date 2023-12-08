@@ -11,7 +11,12 @@ enum class TexturesLevel0_1_2 {
     ConcreteTexture2,
     ConcreteWallWithLamp,
     DirtyConcreteWallWithPipes,
-    YellowWallRedDoor
+    YellowWallRedDoor,
+    NoClipYellowWall,
+    ConcreteTexture1Door,
+    ConcreteTexture2Door,
+    DirtyConcreteWithDoor,
+    DirtyConcreteTexture,
 };
 
 enum class TexturesLeveRun {
@@ -58,9 +63,14 @@ const std::unordered_map<char, TexturesLevel0_1_2> level0_wallTypes{
     {'#', TexturesLevel0_1_2::YellowWall},
     {'@', TexturesLevel0_1_2::ConcreteTexture2},
     {'%', TexturesLevel0_1_2::ConcreteTexture1},
+    {'A', TexturesLevel0_1_2::DirtyConcreteWithDoor},
+    {'W', TexturesLevel0_1_2::DirtyConcreteTexture},
+    {'S', TexturesLevel0_1_2::ConcreteTexture2Door},
+    {'D', TexturesLevel0_1_2::ConcreteTexture1Door},
     {'$', TexturesLevel0_1_2::ConcreteWallWithLamp},
     {'&', TexturesLevel0_1_2::DirtyConcreteWallWithPipes},
     {'^', TexturesLevel0_1_2::YellowWallRedDoor},
+    {'*', TexturesLevel0_1_2::NoClipYellowWall},
     {'.', TexturesLevel0_1_2::YellowCarpet},
     {';', TexturesLevel0_1_2::ConcreteTexture1},
     
