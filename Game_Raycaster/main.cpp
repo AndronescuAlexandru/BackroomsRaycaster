@@ -1,31 +1,19 @@
-﻿// Version : 0.5.1
+﻿// Version : 0.6.2
 
 #include <iostream>
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
-#include <algorithm> 
-#include <SFML/Audio.hpp>
+#include <string.h>
+#include <algorithm>
 #include <SFML/System/Time.hpp>
-
 #include <Windows.h>
 
-#include "Maps.h" // includes data from all maps
-#include "Player.h" // includes the player class and the SFML/Graphics.hpp header file
-#include "Textures.h" // includes all texture files
+#include "Maps.h"
+#include "Player.h"
+#include "Textures.h"
 
-//#include <SFML/Graphics.hpp>
-
-Player player;
-
-sf::SoundBuffer soundEffectsBuffer;
-sf::SoundBuffer levelEntranceSoundBuffer;
-sf::SoundBuffer footstepsBuffer;
-
-sf::Sound soundEffect;
-sf::Sound levelEntranceSound;
-sf::Sound footsteps;
-
+#define VERSION_ID "Version 0.6.2"
 #define PI 3.1459
 #define GRAVITY_ACCELERATION 9.81
 #define FOV 90
@@ -33,10 +21,25 @@ sf::Sound footsteps;
 #define IN_GAME 1
 #define GAME_OVER 2
 
+struct Level_2 level_2;
+struct Level_3 level_3;
+struct Level_Run level_Run;
+struct Level_5 level_5;
+struct Level_0_0_1 level_0_0_1;
+
+Player player;
+CurrentLevel currentLevel;
+
+sf::SoundBuffer soundEffectsBuffer;
+sf::Sound soundEffect;
+
 bool keyboardPressed = false;
 bool levelChanged = false;
 bool playerIsMoving = false;
 bool footstepsPlaying = false;
+bool debugMode = false;
+
+short menuChoice = 0;
 
 float wallShading = 1.5;
 float ceilingShading = 1.5;
@@ -56,70 +59,21 @@ const int texture_wall_size = 128; // size(width and height) of each wall type i
 
 const float fps_refresh_time = 0.1; // time between FPS text refresh. FPS is smoothed out over this time
 
-struct CurrentLevel
-{
-    short ID = 0; // saves the current level number where the player will be
-    short MAP_WIDTH;
-    short MAP_HEIGHT;
-
-}currentLevel;
-
 char getTile(int x, int y, short level)
 {
-    switch (level)
-    {
-    case 0:
-        return level_0_Map[y * level_0.MAP_WIDTH + x];
-    case 1:
-        return level_1_Map[y * level_1.MAP_WIDTH + x];
-    case 2:
-        return level_2_Map[y * level_2.MAP_WIDTH + x];
-    case 3:
-        return level_3_Map[y * level_3.MAP_WIDTH + x];
-    case 4:
-        return level_Run_Map[y * level_Run.MAP_WIDTH + x];
-    case 5:
-        return level_5_Map[y * level_5.MAP_WIDTH + x];
-    case 6:
-        return level_0_0_1_Map[y * level_5.MAP_WIDTH + x];
-    default:
-        return level_0_Map[y * level_0.MAP_WIDTH + x];
-        break;
-    }
+    return currentLevel.map[y * currentLevel.MAP_WIDTH + x];
 }
 
 float getHeight(int x, int y, short level)
 {
-    switch (level)
-    {
-    case 0:
-        return 3;
-    case 1:
-        return 3;
-    case 2:
-        return 1;
-    case 4:
-        return 1;
-    case 5:
-        return level_5_HeightMap[y * level_5.MAP_WIDTH + x];
-    case 6:
-        return 3;
-    default:
-        return 3;
-        break;
-    }
-}
-
-float getGroundHeight(int x, int y)
-{
-    return groundHeightMap[y * level_0.MAP_WIDTH + x];
+    return currentLevel.maxWallHeight;
 }
 
 // check if a rectangular can move to given position without colliding with walls or
 // being outside of the map
 // position is considered the middle of the rectangle
 
-bool canMove(sf::Vector2f position, sf::Vector2f size) 
+bool canMove(sf::Vector2f position, sf::Vector2f size)
 {
     // create the corners of the rectangle
     sf::Vector2i upper_left(position - size / 2.0f);
@@ -133,7 +87,7 @@ bool canMove(sf::Vector2f position, sf::Vector2f size)
     // loop through each map tile within the rectangle. The rectangle could be multiple tiles in size!
     for (int y = upper_left.y; y <= lower_right.y; y++)
     {
-        for (int x = upper_left.x; x <= lower_right.x; x++) 
+        for (int x = upper_left.x; x <= lower_right.x; x++)
         {
             if (getTile(x, y, currentLevel.ID) != '.' && getTile(x, y, currentLevel.ID) != ';' && getTile(x, y, currentLevel.ID) != 'j')
             {
@@ -146,19 +100,19 @@ bool canMove(sf::Vector2f position, sf::Vector2f size)
 
 // rotate a given vector with given float value in radians and return the result
 
-sf::Vector2f rotateVec(sf::Vector2f vec, float value) 
+sf::Vector2f rotateVec(sf::Vector2f vec, float value)
 {
-    return sf::Vector2f(vec.x * std::cos(value) - vec.y * std::sin(value),vec.x * std::sin(value) + vec.y * std::cos(value));
+    return sf::Vector2f(vec.x * std::cos(value) - vec.y * std::sin(value), vec.x * std::sin(value) + vec.y * std::cos(value));
 }
 
-void updateFPS(sf::Text &fpsText, float dt, int64_t frame_time_micro)
+void updateFPS(sf::Text& fpsText, float dt, int64_t frame_time_micro)
 {
     static float dt_counter = 0.0; // delta time for multiple frames, for calculating FPS smoothly
     static int frame_counter = 0; // counts frames for FPS calculation
     char frameInfoString[sizeof("FPS: *****.*, Frame time: ******")];
 
     // Update FPS, smoothed over time
-    if (dt_counter >= fps_refresh_time) 
+    if (dt_counter >= fps_refresh_time)
     {
         float fps = (float)frame_counter / dt_counter;
         frame_time_micro /= frame_counter;
@@ -182,7 +136,7 @@ float deg_to_rad(const float i_degrees)
     return PI * get_degrees(i_degrees) / 180;
 }
 
-void playSFX(short type, sf::Sound &soundEffect)
+void playSFX(short type, sf::Sound& soundEffect)
 {
 
     switch (type)
@@ -200,7 +154,7 @@ void playSFX(short type, sf::Sound &soundEffect)
     case 1:
     {
         if (!soundEffectsBuffer.loadFromFile("Data/Audio/FallingSFX.mp3"))
-                std::cout << "Could not open sound file NoclipSFX1.mp3!\n";
+            std::cout << "Could not open sound file NoclipSFX1.mp3!\n";
 
         soundEffect.setBuffer(soundEffectsBuffer);
         soundEffect.play();
@@ -211,7 +165,7 @@ void playSFX(short type, sf::Sound &soundEffect)
     }
 }
 
-void keyboardInput(bool hasFocus, Player &player, sf::Vector2f size, float dt) // handles keyboard input
+void keyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) // handles keyboard input
 {
     bool coordinatesRecentlyChanged = false;
     if (hasFocus)
@@ -222,66 +176,83 @@ void keyboardInput(bool hasFocus, Player &player, sf::Vector2f size, float dt) /
         float moveForward = 0.0;
 
         // get input
-        if (kb::isKeyPressed(kb::Up)) 
+        if (kb::isKeyPressed(kb::Up))
         {
             moveForward = 1.0;
         }
-        else 
-            if (kb::isKeyPressed(kb::Down)) 
+        else
+            if (kb::isKeyPressed(kb::Down))
             {
-
                 moveForward = -1.0;
             }
             else
             {
                 footstepsPlaying = false;
-                footsteps.stop();
+                currentLevel.footsteps.stop();
             }
 
-        
-
-        if (kb::isKeyPressed(kb::A)) // shortens the render distance and darkens the wall shading
+        // debug controls
+        if (debugMode == true)
         {
-            wallShading = 4;
-            ceilingShading = 4;
-            floorShading = 4;
-            RENDER_DISTANCE = 4;
-        }
+            if (kb::isKeyPressed(kb::A)) // shortens the render distance and darkens the wall shading
+            {
+                wallShading = 4;
+                ceilingShading = 4;
+                floorShading = 4;
+                RENDER_DISTANCE = 4;
+            }
 
-        if (kb::isKeyPressed(kb::D))
-        {
-            wallShading = 1.5;
-            RENDER_DISTANCE = 16;
-        }
+            if (kb::isKeyPressed(kb::D))
+            {
+                wallShading = 1.5;
+                RENDER_DISTANCE = 16;
+            }
 
-        if (kb::isKeyPressed(kb::W) && cameraHeight < 0.95)
-        {
-            cameraHeight += 0.1 * dt;
-            keyboardPressed = true;
-        }
-        else
-        {
-            keyboardPressed = false;
-        }
+            if (kb::isKeyPressed(kb::Q))
+            {
+                std::cout << "Enter player's new X position\n";
+                std::cin >> player.position.x;
+                std::cout << "Enter player's new Y position\n";
+                std::cin >> player.position.y;
+            }
 
-        if (kb::isKeyPressed(kb::S) && cameraHeight > 0.1)
-            cameraHeight -= 0.1 * dt;
+            if (kb::isKeyPressed(kb::W) && cameraHeight < 0.95)
+            {
+                cameraHeight += 0.1 * dt;
+                keyboardPressed = true;
+            }
+            else
+            {
+                keyboardPressed = false;
+            }
+
+            if (kb::isKeyPressed(kb::S) && cameraHeight > 0.1)
+                cameraHeight -= 0.1 * dt;
+
+            if (kb::isKeyPressed(kb::L))
+            {
+                std::cout << "Enter level ID to load \n";
+                std::cin >> currentLevel.ID;
+
+                levelChanged = true;
+            }
+        }
 
         if (kb::isKeyPressed(kb::LShift))
         {
             player.playerMoveSpeed = 3.5;
-            footsteps.setPitch(1.4);
+            currentLevel.footsteps.setPitch(1.4);
         }
         else if (player.playerMoveSpeed = 4.0)
         {
             player.playerMoveSpeed = 2;
-            footsteps.setPitch(0.9);
+            currentLevel.footsteps.setPitch(0.9);
         }
 
-        if (kb::isKeyPressed(kb::Space) && keyboardPressed == false)
+        if (kb::isKeyPressed(kb::Space))
         {
             cameraHeight = 0.8;
-            keyboardPressed = true;
+            //keyboardPressed = true;
         }
 
         if (kb::isKeyPressed(kb::E))
@@ -294,8 +265,8 @@ void keyboardInput(bool hasFocus, Player &player, sf::Vector2f size, float dt) /
                 levelChanged = true;
             }
 
-            if (currentLevel.ID == 0 && (((int)player.position.x == 1 && (int)player.position.y == 127) || ((int)player.position.x == 16 && (int)player.position.y == 126)
-                || ((int)player.position.x == 126 && (int)player.position.y == 125)))
+            if (currentLevel.ID == 0 && (((int)player.position.x == 1 && (int)player.position.y == 99)
+                || ((int)player.position.x == 126 && (int)player.position.y == 17)))
             {
                 currentLevel.ID = 1;
                 //playSFX(1, soundEffect);
@@ -326,13 +297,13 @@ void keyboardInput(bool hasFocus, Player &player, sf::Vector2f size, float dt) /
             }
 
         }
-        
+
         if (moveForward != 0.0f)
         {
             if (footstepsPlaying == false)
             {
-                footsteps.play();
-                footsteps.setLoop(true);
+                currentLevel.footsteps.play();
+                currentLevel.footsteps.setLoop(true);
                 footstepsPlaying = true;
             }
 
@@ -351,20 +322,22 @@ void keyboardInput(bool hasFocus, Player &player, sf::Vector2f size, float dt) /
         float rotateDirection = 0.0;
 
         // get input
-        if (kb::isKeyPressed(kb::Left)) 
+        if (kb::isKeyPressed(kb::Left))
         {
             rotateDirection = -1.0;
         }
-        else if (kb::isKeyPressed(kb::Right)) 
+        else if (kb::isKeyPressed(kb::Right))
         {
             rotateDirection = 1.0;
         }
 
         if (kb::isKeyPressed(kb::Escape))
+        {
             gameState = MAIN_MENU;
+        }
 
         // handle rotation
-        if (rotateDirection != 0.0) 
+        if (rotateDirection != 0.0)
         {
             float rotation = player.playerRotateSpeed * rotateDirection * dt;
             player.direction = rotateVec(player.direction, rotation);
@@ -375,301 +348,305 @@ void keyboardInput(bool hasFocus, Player &player, sf::Vector2f size, float dt) /
     }
 }
 
-void loadLevel(sf::RenderWindow &window,sf::RenderStates &state, sf::SoundBuffer& soundBuffer, sf::Sound& AmbientSFX, sf::Color& color, sf::Color& color1, sf::Color& color2, sf::Color& floorColor)
+void optionsMenu(sf::RenderWindow& window, sf::Font font, sf::Sprite& menuBackgroundSprite)
 {
-    // loads files specific for each level and set render state that uses the texture
-    switch (currentLevel.ID)
+    short choice = 0;
+
+    sf::RectangleShape setRes_640_480_Button(sf::Vector2f(120, 30));
+    sf::RectangleShape setRes_800_600_Button(sf::Vector2f(120, 30));
+    sf::RectangleShape setRes_1024_600_Button(sf::Vector2f(120, 30));
+    sf::RectangleShape setRes_1280_720_Button(sf::Vector2f(120, 30));
+    sf::RectangleShape setRes_1600_900_Button(sf::Vector2f(120, 30));
+    sf::RectangleShape setRes_1920_1080_Button(sf::Vector2f(120, 30));
+    sf::RectangleShape decreaseDD(sf::Vector2f(30, 30));
+    sf::RectangleShape increaseDD(sf::Vector2f(30, 30));
+
+    sf::Text gameResSectionText;
+    sf::Text ResText_640_480;
+    sf::Text ResText_800_600;
+    sf::Text ResText_1024_600;
+    sf::Text ResText_1280_720;
+    sf::Text ResText_1600_900;
+    sf::Text ResText_1920_1080;
+    sf::Text drawDistanceValue;
+    sf::Text plus;
+    sf::Text minus;
+
+    // text properties
+
+    // setting text font
+    ResText_640_480.setFont(font);
+    ResText_800_600.setFont(font);
+    ResText_1024_600.setFont(font);
+    ResText_1280_720.setFont(font);
+    ResText_1600_900.setFont(font);
+    ResText_1920_1080.setFont(font);
+    gameResSectionText.setFont(font);
+    drawDistanceValue.setFont(font);
+
+    //setting text character size
+    ResText_640_480.setCharacterSize(20);
+    ResText_800_600.setCharacterSize(20);
+    ResText_1024_600.setCharacterSize(20);
+    ResText_1280_720.setCharacterSize(20);
+    ResText_1600_900.setCharacterSize(20);
+    ResText_1920_1080.setCharacterSize(20);
+    gameResSectionText.setCharacterSize(20);
+    drawDistanceValue.setCharacterSize(20);
+
+    //setting text string
+    ResText_640_480.setString("640x480");
+    ResText_800_600.setString("800x600");
+    ResText_1024_600.setString("1024x600");
+    ResText_1280_720.setString("1280x720");
+    ResText_1600_900.setString("1600x900");
+    ResText_1920_1080.setString("1920x1080");
+    gameResSectionText.setString("Screen resolution (Cureent screen resolution " + std::to_string(screenWidth) + 'x' + std::to_string(screenHeight) + ')');
+    drawDistanceValue.setString("Draw distance " + std::to_string(RENDER_DISTANCE));
+
+    //setting text color
+    ResText_640_480.setFillColor(sf::Color::White);
+    ResText_800_600.setFillColor(sf::Color::White);
+    ResText_1024_600.setFillColor(sf::Color::White);
+    ResText_1280_720.setFillColor(sf::Color::White);
+    ResText_1600_900.setFillColor(sf::Color::White);
+    ResText_1920_1080.setFillColor(sf::Color::White);
+    gameResSectionText.setFillColor(sf::Color::White);
+    drawDistanceValue.setFillColor(sf::Color::White);
+
+    // setting text position
+    gameResSectionText.setPosition(5, 5);
+    ResText_640_480.setPosition(5, 30);
+    ResText_800_600.setPosition(5, 65);
+    ResText_1024_600.setPosition(5, 100);
+    ResText_1280_720.setPosition(5, 135);
+    ResText_1600_900.setPosition(5, 170);
+    ResText_1920_1080.setPosition(5, 205);
+    drawDistanceValue.setPosition(5, 240);
+
+    // button properties
+
+    // setting button color
+    setRes_640_480_Button.setFillColor(sf::Color::Black);
+    setRes_800_600_Button.setFillColor(sf::Color::Black);
+    setRes_1024_600_Button.setFillColor(sf::Color::Black);
+    setRes_1280_720_Button.setFillColor(sf::Color::Black);
+    setRes_1600_900_Button.setFillColor(sf::Color::Black);
+    setRes_1920_1080_Button.setFillColor(sf::Color::Black);
+    decreaseDD.setFillColor(sf::Color::Black);
+    increaseDD.setFillColor(sf::Color::Black);
+
+    // setting button position
+    setRes_640_480_Button.setPosition(sf::Vector2f(5, 30));
+    setRes_800_600_Button.setPosition(sf::Vector2f(5,65));
+    setRes_1024_600_Button.setPosition(sf::Vector2f(5,100));
+    setRes_1280_720_Button.setPosition(sf::Vector2f(5,135));
+    setRes_1600_900_Button.setPosition(sf::Vector2f(5,170));
+    setRes_1920_1080_Button.setPosition(sf::Vector2f(5, 205));
+    decreaseDD.setPosition(sf::Vector2f(5, 270));
+    increaseDD.setPosition(sf::Vector2f(50, 270));
+
+    while (true)
     {
-    case 0:
-        if (!level_0.Textures.loadFromFile("Data/Textures/level_0_textures.png"))
-        {
-            std::cout << "Cannot open texture level_0_textures.png!\n";
-        }
+        window.clear();
 
-        if (!soundBuffer.loadFromFile("Data/Audio/Level0LightAmbience.mp3"))
-        {
-            std::cout << "Cannot open sound file Level0LightAmbience.mp3!\n";
-        }
+        window.draw(menuBackgroundSprite);
 
-        if (!footstepsBuffer.loadFromFile("Data/Audio/CarpetFootsteps.mp3"))
-            std::cout << "Could not open sound file CarpetFootsteps2.mp3!\n";
+        window.draw(gameResSectionText);
 
-        footsteps.setBuffer(footstepsBuffer);
+        window.draw(setRes_640_480_Button);
+        window.draw(setRes_800_600_Button);
+        window.draw(setRes_1024_600_Button);
+        window.draw(setRes_1280_720_Button);
+        window.draw(setRes_1600_900_Button);
+        window.draw(setRes_1920_1080_Button);
 
-        currentLevel.MAP_HEIGHT = level_0.MAP_HEIGHT;
-        currentLevel.MAP_WIDTH = level_0.MAP_WIDTH;
+        window.draw(ResText_640_480);
+        window.draw(ResText_800_600);
+        window.draw(ResText_1024_600);
+        window.draw(ResText_1280_720);
+        window.draw(ResText_1600_900);
+        window.draw(ResText_1920_1080);
 
-        state.texture = &level_0.Textures;
+        window.draw(drawDistanceValue);
+        window.draw(decreaseDD);
+        window.draw(increaseDD);
 
-        AmbientSFX.setBuffer(soundBuffer);
-        AmbientSFX.setVolume(50);
-        AmbientSFX.play();
-        AmbientSFX.setLoop(true);
-
-        wallShading = 1.1;
-
-        color1 = sf::Color(182, 179, 102);
-        color2 = sf::Color(255, 255, 255);
-
-        floorColor = sf::Color(178, 163, 106);
-
-        player.position.x = 1.5;
-        player.position.y = 1.5;
-
-        //ceilingShading = 1.5;
-        //floorShading = 1.5;
-        break;
-    case 1:
-        window.clear(sf::Color::Black);
         window.display();
 
-        if (!levelEntranceSoundBuffer.loadFromFile("Data/Audio/FallingSFX.mp3"))
+        if ((sf::Keyboard::isKeyPressed(sf::Keyboard::Up) || sf::Keyboard::isKeyPressed(sf::Keyboard::W)) && choice > 0)
+            choice--;
+
+        if ((sf::Keyboard::isKeyPressed(sf::Keyboard::Down) || sf::Keyboard::isKeyPressed(sf::Keyboard::S)) && choice < 6)
+            choice++;
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape))
+            break;
+
+        setRes_640_480_Button.setFillColor(sf::Color::Black);
+        setRes_800_600_Button.setFillColor(sf::Color::Black);
+        setRes_1024_600_Button.setFillColor(sf::Color::Black);
+        setRes_1280_720_Button.setFillColor(sf::Color::Black);
+        setRes_1600_900_Button.setFillColor(sf::Color::Black);
+        setRes_1920_1080_Button.setFillColor(sf::Color::Black);
+
+        ResText_640_480.setFillColor(sf::Color::White);
+        ResText_800_600.setFillColor(sf::Color::White);
+        ResText_1024_600.setFillColor(sf::Color::White);
+        ResText_1280_720.setFillColor(sf::Color::White);
+        ResText_1600_900.setFillColor(sf::Color::White);
+        ResText_1920_1080.setFillColor(sf::Color::White);
+
+        decreaseDD.setFillColor(sf::Color::Black);
+        increaseDD.setFillColor(sf::Color::Black);
+
+        sf::sleep(sf::milliseconds(100));
+
+        switch (choice)
         {
-            std::cout << "Cannot open sound file Level0_01EntranceSFX.mp3!\n";
+        case 0:
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter) && screenWidth != 640 && screenHeight != 480)
+            {
+                screenWidth = 640;
+                screenHeight = 480;
+                window.close();
+                window.create(sf::VideoMode(640, 480), "Backrooms");
+
+                menuBackgroundSprite.setScale(sf::Vector2f(1.0, 0.75));
+                gameResSectionText.setString("Screen resolution (Cureent screen resolution " + std::to_string(screenWidth) + 'x' + std::to_string(screenHeight) + ')');
+            }
+            
+            setRes_640_480_Button.setFillColor(sf::Color::White);
+            ResText_640_480.setFillColor(sf::Color::Black);
+
+            break;
+        case 1:
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter) && screenWidth != 800 && screenHeight != 600)
+            {
+                screenWidth = 800;
+                screenHeight = 600;
+                window.close();
+                window.create(sf::VideoMode(800, 600), "Backrooms");
+
+                menuBackgroundSprite.setScale(sf::Vector2f(1.25, 1));
+                gameResSectionText.setString("Screen resolution (Cureent screen resolution " + std::to_string(screenWidth) + 'x' + std::to_string(screenHeight) + ')');
+            }
+            
+            setRes_800_600_Button.setFillColor(sf::Color::White);
+            ResText_800_600.setFillColor(sf::Color::Black);
+
+            break;
+        case 2:
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter) && screenWidth != 1024 && screenHeight != 600)
+            {
+                screenWidth = 1024;
+                screenHeight = 600;
+                window.close();
+                window.create(sf::VideoMode(1024, 600), "Backrooms");
+
+                menuBackgroundSprite.setScale(sf::Vector2f(1.75, 1));
+                gameResSectionText.setString("Screen resolution (Cureent screen resolution " + std::to_string(screenWidth) + 'x' + std::to_string(screenHeight) + ')');
+            }
+               
+            setRes_1024_600_Button.setFillColor(sf::Color::White);
+            ResText_1024_600.setFillColor(sf::Color::Black);
+
+            break;
+        case 3:
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter) && screenWidth != 1280 && screenHeight != 720)
+            {
+                screenWidth = 1280;
+                screenHeight = 720;
+                window.close();
+                window.create(sf::VideoMode(1280, 720), "Backrooms");
+
+                menuBackgroundSprite.setScale(sf::Vector2f(1.95, 1.15));
+                gameResSectionText.setString("Screen resolution (Cureent screen resolution " + std::to_string(screenWidth) + 'x' + std::to_string(screenHeight) + ')');
+            }
+
+            setRes_1280_720_Button.setFillColor(sf::Color::White);
+            ResText_1280_720.setFillColor(sf::Color::Black);
+
+            break;
+        case 4:
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter) && screenWidth != 1600 && screenHeight != 900)
+            {
+                screenWidth = 1600;
+                screenHeight = 900;
+                window.close();
+                window.create(sf::VideoMode(1600, 900), "Backrooms");
+
+                menuBackgroundSprite.setScale(sf::Vector2f(2.45, 1.50));
+                gameResSectionText.setString("Screen resolution (Cureent screen resolution " + std::to_string(screenWidth) + 'x' + std::to_string(screenHeight) + ')');
+            }
+
+            setRes_1600_900_Button.setFillColor(sf::Color::White);
+            ResText_1600_900.setFillColor(sf::Color::Black);
+
+            break;
+        case 5:
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter) && screenWidth != 1920 && screenHeight != 1080)
+            {
+                screenWidth = 1920;
+                screenHeight = 1080;
+                window.close();
+                window.create(sf::VideoMode(1920, 1080), "Backrooms");
+
+                menuBackgroundSprite.setScale(sf::Vector2f(2.85, 1.65));
+                gameResSectionText.setString("Screen resolution (Cureent screen resolution " + std::to_string(screenWidth) + 'x' + std::to_string(screenHeight) + ')');
+            }
+            
+            setRes_1920_1080_Button.setFillColor(sf::Color::White);
+            ResText_1920_1080.setFillColor(sf::Color::Black);
+
+            break;
+        case 6: 
+            decreaseDD.setFillColor(sf::Color::White);
+            increaseDD.setFillColor(sf::Color::White);
+            if ((sf::Keyboard::isKeyPressed(sf::Keyboard::Left) || sf::Keyboard::isKeyPressed(sf::Keyboard::A)) && RENDER_DISTANCE > 8)
+            {
+                decreaseDD.setFillColor(sf::Color::Black);
+                increaseDD.setFillColor(sf::Color::White);
+                RENDER_DISTANCE--;
+
+                drawDistanceValue.setString("Draw distance " + std::to_string(RENDER_DISTANCE));
+            }
+
+            if ((sf::Keyboard::isKeyPressed(sf::Keyboard::Right) || sf::Keyboard::isKeyPressed(sf::Keyboard::D)) && RENDER_DISTANCE < 128)
+            {
+                decreaseDD.setFillColor(sf::Color::White);
+                increaseDD.setFillColor(sf::Color::Black);
+                RENDER_DISTANCE++;
+
+                drawDistanceValue.setString("Draw distance " + std::to_string(RENDER_DISTANCE));
+            }
+            break;
+        case 7:
+
+            break;
+        default:
+            break;
         }
-
-        levelEntranceSound.setBuffer(levelEntranceSoundBuffer);
-        levelEntranceSound.play();
-
-        sf::sleep(sf::seconds(2));
-
-        if (!level_1.Textures.loadFromFile("Data/Textures/level_0_textures.png"))
-        {
-            std::cout << "Cannot open texture level_0_textures.png!\n";
-        }
-
-        if (!soundBuffer.loadFromFile("Data/Audio/Level0LightAmbience.mp3"))
-        {
-            std::cout << "Cannot open sound file Level0LightAmbience.mp3!\n";
-        }
-
-        if (!footstepsBuffer.loadFromFile("Data/Audio/ConcreteFootsteps.mp3"))
-            std::cout << "Could not open sound file ConcreteFootsteps.mp3!\n";
-
-        footsteps.setBuffer(footstepsBuffer);
-
-        currentLevel.MAP_HEIGHT = level_1.MAP_HEIGHT;
-        currentLevel.MAP_WIDTH = level_1.MAP_WIDTH;
-
-        state.texture = &level_1.Textures;
-
-        AmbientSFX.setBuffer(soundBuffer);
-        AmbientSFX.setVolume(10);
-        AmbientSFX.play();
-        AmbientSFX.setLoop(true);
-
-        wallShading = 1.5;
-        ceilingShading = 1.5;
-        floorShading = 1.5;
-
-        color1 = sf::Color(154, 153, 149);
-        color2 = sf::Color(200, 200, 200); //sf::Color(129, 124, 121);
-        color.r /= ceilingShading;
-        color.g /= ceilingShading;
-        color.b /= ceilingShading;
-
-        floorColor = sf::Color(154, 153, 149);
-        floorColor.r /= floorShading;
-        floorColor.g /= floorShading;
-        floorColor.b /= floorShading;
-
-        //player.position.x = 1.5;
-        //player.position.y = 1.5;
-
-        break;
-    case 2:
-        if (!level_2.Textures.loadFromFile("Data/Textures/level_0_textures.png"))
-        {
-            std::cout << "Cannot open texture level_0_textures.png!\n";
-        }
-
-        if (!footstepsBuffer.loadFromFile("Data/Audio/ConcreteFootsteps.mp3"))
-            std::cout << "Could not open sound file ConcreteFootsteps.mp3!\n";
-
-        footsteps.setBuffer(footstepsBuffer);
-
-        currentLevel.MAP_HEIGHT = level_2.MAP_HEIGHT;
-        currentLevel.MAP_WIDTH = level_2.MAP_WIDTH;
-
-        state.texture = &level_2.Textures;
-
-        wallShading = 2.5;
-        ceilingShading = 2.5;
-        floorShading = 2.5;
-
-        color1 = sf::Color(154, 153, 149);
-        color2 = sf::Color(154, 153, 149); //sf::Color(129, 124, 121);
-        color.r /= ceilingShading;
-        color.g /= ceilingShading;
-        color.b /= ceilingShading;
-
-        floorColor = sf::Color(154, 153, 149);
-        floorColor.r /= floorShading;
-        floorColor.g /= floorShading;
-        floorColor.b /= floorShading;
-
-        player.position.x = 1.5;
-        player.position.y = 1.5;
-
-        break;
-    case 3:
-        if (!level_3.Textures.loadFromFile("Data/Textures/textures.png"))
-        {
-            std::cout << "Cannot open texture textures.png!\n";
-        }
-
-        currentLevel.MAP_HEIGHT = level_3.MAP_HEIGHT;
-        currentLevel.MAP_WIDTH = level_3.MAP_WIDTH;
-
-        state.texture = &level_3.Textures;
-
-        color1 = sf::Color(43, 162, 198);
-        color2 = sf::Color(96, 96, 96);
-        floorColor = sf::Color(96, 96, 96);
-
-        break;
-    case 4:
-        if (!level_Run.Textures.loadFromFile("Data/Textures/level_Run_textures.png"))
-        {
-            std::cout << "Cannot open texture level_Run_textures.png!\n";
-        }
-
-        if (!soundBuffer.loadFromFile("Data/Audio/LevelRunAmbientSFX.mp3"))
-        {
-            std::cout << "Cannot open sound file Level0LightAmbience.mp3!\n";
-        }
-
-        if (!footstepsBuffer.loadFromFile("Data/Audio/ConcreteFootsteps.mp3"))
-            std::cout << "Could not open sound file ConcreteFootsteps.mp3!\n";
-
-        footsteps.setBuffer(footstepsBuffer);
-
-        currentLevel.MAP_HEIGHT = level_Run.MAP_HEIGHT;
-        currentLevel.MAP_WIDTH = level_Run.MAP_WIDTH;
-
-        state.texture = &level_Run.Textures;
-
-        color1 = sf::Color(154, 153, 149);
-        color2 = sf::Color(154, 153, 149);
-
-        floorColor = sf::Color(154, 153, 149);
-        floorColor.r /= floorShading;
-        floorColor.g /= floorShading;
-        floorColor.b /= floorShading;
-
-        AmbientSFX.setBuffer(soundBuffer);
-        AmbientSFX.play();
-        AmbientSFX.setLoop(true);
-
-        break;
-    case 5:
-        if (!level_5.Textures.loadFromFile("Data/Textures/textures.png"))
-        {
-            std::cout << "Cannot open texture textures.png!\n";
-        }
-
-        if (!footstepsBuffer.loadFromFile("Data/Audio/CarpetFootsteps.mp3"))
-            std::cout << "Could not open sound file CarpetFootsteps2.mp3!\n";
-
-        footsteps.setBuffer(footstepsBuffer);
-
-        currentLevel.MAP_HEIGHT = level_5.MAP_HEIGHT;
-        currentLevel.MAP_WIDTH = level_5.MAP_WIDTH;
-
-        state.texture = &level_5.Textures;
-
-        color1 = sf::Color(154, 153, 149);
-        color2 = sf::Color(154, 153, 149);
-
-        floorColor = sf::Color(154, 153, 149);
-        floorColor.r /= floorShading;
-        floorColor.g /= floorShading;
-        floorColor.b /= floorShading;
-        break;
-    case 6:
-
-        if (!level_0_0_1.Textures.loadFromFile("Data/Textures/level_0_textures.png"))
-        {
-            std::cout << "Cannot open texture level_0_textures.png!\n";
-        } 
-
-        if (!levelEntranceSoundBuffer.loadFromFile("Data/Audio/Level0_01EntranceSFX.mp3"))
-        {
-            std::cout << "Cannot open sound file Level0_01EntranceSFX.mp3!\n";
-        }
-        
-        if (!soundBuffer.loadFromFile("Data/Audio/Level0LightAmbience.mp3"))
-        {
-            std::cout << "Cannot open sound file Level0LightAmbience.mp3!\n";
-        }
-
-        if (!footstepsBuffer.loadFromFile("Data/Audio/CarpetFootsteps.mp3"))
-            std::cout << "Could not open sound file CarpetFootsteps2.mp3!\n";
-
-        footsteps.setBuffer(footstepsBuffer);
-
-        player.position.x = 1.6;
-        player.position.y = 2.5;
-
-        currentLevel.MAP_HEIGHT = level_0_0_1.MAP_HEIGHT;
-        currentLevel.MAP_WIDTH = level_0_0_1.MAP_WIDTH;
-
-        state.texture = &level_0_0_1.Textures;
-
-        levelEntranceSound.setBuffer(levelEntranceSoundBuffer);
-        levelEntranceSound.play();
-
-        AmbientSFX.setBuffer(soundBuffer);
-        AmbientSFX.play();
-        AmbientSFX.setLoop(true);
-
-        wallShading = 1.1;
-
-        color1 = sf::Color(182, 179, 102);
-        color2 = sf::Color(255, 255, 255);
-
-        //color1.r /= wallShading;
-        //color1.g /= wallShading;
-        //color1.b /= wallShading;
-
-        floorColor = sf::Color(178, 163, 106);
-        //floorColor.r /= wallShading;
-        //floorColor.g /= wallShading;
-        //floorColor.b /= wallShading;
-
-        break;
-    default:
-        if (!footstepsBuffer.loadFromFile("Data/Audio/CarpetFootsteps.mp3"))
-            std::cout << "Could not open sound file CarpetFootsteps2.mp3!\n";
-
-        footsteps.setBuffer(footstepsBuffer);
-
-        std::cout << "Could not load any levels!";
-
-        break;
     }
+
 }
 
-
-int main() 
+int main()
 {
     bool hasFocus = true;
 
-    // colors for floor and ceiling tiles
-    sf::Color color;
-    sf::Color color1;
-    sf::Color color2;
-
-    sf::Color floorColor;
-
     sf::Font font;
+    sf::Text startButtonText;
+    sf::Text optionsButtonText;
+    sf::Text exitButtonText;
+    sf::Text versionID;
 
-    sf::SoundBuffer soundBuffer;
-    sf::SoundBuffer entitySoundBuffer;
+    sf::Texture mainMenuBackgroundTexture;
+    sf::Sprite mainMenuBackgroundSprite;
 
-    sf::Sound AmbientSFX;
-    sf::Sound EntitySFX;
-
+    sf::RectangleShape startGameButton(sf::Vector2f(120, 30));
+    sf::RectangleShape optionsButton(sf::Vector2f(120, 30));
+    sf::RectangleShape exitGameButton(sf::Vector2f(120, 30));
 
     sf::Vector2f size(player.playerSize, player.playerSize); // player collision box width and height
 
@@ -682,94 +659,199 @@ int main()
     sf::Clock clock; // timer
 
     int64_t frame_time_micro = 0; // time needed to draw frames in microseconds
-  
+
+    if (!mainMenuBackgroundTexture.loadFromFile("Data/Textures/menu_background.jpg"))
+    {
+        std::cout << "Cannot open image file menu_background.jpg";
+        return 1;
+    }
+
     if (!font.loadFromFile("Data/Fonts/arial.ttf")) //loads font
     {
         std::cout << "Cannot open font arial.ttf!\n";
         return 1;
     }
 
-    if(!entitySoundBuffer.loadFromFile("Data/Audio/EntitySFX.mp3"))
+    if (!currentLevel.entitySoundBuffer.loadFromFile("Data/Audio/EntitySFX.mp3"))
     {
         std::cout << "Cannot open sound file EntitySFX.mp3!\n";
         return 1;
     }
 
+    mainMenuBackgroundSprite.setTexture(mainMenuBackgroundTexture);
+    mainMenuBackgroundSprite.setScale(sf::Vector2f(1.25, 1));
 
-    EntitySFX.setBuffer(entitySoundBuffer);
+    startGameButton.setFillColor(sf::Color::Black);
+    optionsButton.setFillColor(sf::Color::Black);
+    exitGameButton.setFillColor(sf::Color::Black);
+    versionID.setFillColor(sf::Color::White);
+
+    startButtonText.setFont(font);
+    optionsButtonText.setFont(font);
+    exitButtonText.setFont(font);
+    versionID.setFont(font);
+
+    startButtonText.setString("Start Game");
+    optionsButtonText.setString("Options");
+    exitButtonText.setString("Exit Game");
+    versionID.setString(VERSION_ID);
+
+    startButtonText.setCharacterSize(20);
+    optionsButtonText.setCharacterSize(20);
+    exitButtonText.setCharacterSize(20);
+    versionID.setCharacterSize(20);
+
+    startButtonText.setPosition(screenWidth / 2 - 40, screenHeight / 2);
+    optionsButtonText.setPosition(screenWidth / 2 - 40, screenHeight / 2 + 35);
+    exitButtonText.setPosition(screenWidth / 2 - 40, screenHeight / 2 + 70);
+    versionID.setPosition(5, screenHeight - 40);
+
+    startGameButton.setPosition(screenWidth / 2 - 40, screenHeight / 2);
+    optionsButton.setPosition(screenWidth / 2 - 40, screenHeight / 2 + 35);
+    exitGameButton.setPosition(screenWidth / 2 - 40, screenHeight / 2 + 70);
+
+    currentLevel.EntitySFX.setBuffer(currentLevel.entitySoundBuffer);
 
     sf::RenderWindow window(sf::VideoMode(screenWidth, screenHeight), "Backrooms"); // create window after loading everything up
 
-    //window.setSize(sf::Vector2u(screenWidth, screenHeight));
+    window.setSize(sf::Vector2u(screenWidth, screenHeight));
 
     //window.setFramerateLimit(60);
 
-    while (window.isOpen()) 
+    while (window.isOpen())
     {
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) && menuChoice < 2)
+        {
+            menuChoice++;
+            sf::sleep(sf::milliseconds(100));
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up) && menuChoice > 0)
+        {
+            menuChoice--;
+            sf::sleep(sf::milliseconds(100));
+        }
+        window.clear();
+
+        // handle SFML events
+        sf::Event event;
+        sf::View view = window.getDefaultView();
+
+        while (window.pollEvent(event))
+        {
+
+            switch (event.type)
+            {
+            case sf::Event::Closed:
+                window.close();
+                break;
+            case sf::Event::LostFocus:
+                hasFocus = false;
+                break;
+            case sf::Event::GainedFocus:
+                hasFocus = true;
+                break;
+            case sf::Event::Resized:
+                // update the view to the new size of the window
+                view.setSize({
+                                        static_cast<float>(event.size.width),
+                                        static_cast<float>(event.size.height)
+                    });
+                window.setView(view);
+                break;
+            default:
+                break;
+            }
+        }
+
         switch (gameState)
         {
         case MAIN_MENU:
         {
-            std::cout << "Enter level choice\n";
-            std::cin >> currentLevel.ID;
+            currentLevel.AmbientSFX.stop();
 
-            std::cout << "Enter draw distance\n";
-            std::cin >> RENDER_DISTANCE;
+            window.draw(mainMenuBackgroundSprite);
+            window.draw(startGameButton);
+            window.draw(optionsButton);
+            window.draw(exitGameButton);
+            window.draw(startButtonText);
+            window.draw(optionsButtonText);
+            window.draw(exitButtonText);
+            window.draw(versionID);
 
-            std::cout << "Enter screen width\n";
-            std::cin >> screenWidth;
+            startGameButton.setFillColor(sf::Color::Black);
+            optionsButton.setFillColor(sf::Color::Black);
+            exitGameButton.setFillColor(sf::Color::Black);
 
-            std::cout << "Enter screen height\n";
-            std::cin >> screenHeight;
+            startButtonText.setFillColor(sf::Color::White);
+            optionsButtonText.setFillColor(sf::Color::White);
+            exitButtonText.setFillColor(sf::Color::White);
 
-            gameState = IN_GAME;
-            loadLevel(window, state, soundBuffer, AmbientSFX, color, color1, color2, floorColor);
+            switch (menuChoice)
+            {
+            case 0:
+                startGameButton.setFillColor(sf::Color::White);
+                startButtonText.setFillColor(sf::Color::Black);
+
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter))
+                {
+                    if (debugMode == true)
+                    {
+                        std::cout << "Enter level choice\n";
+                        std::cin >> currentLevel.ID;
+                    }
+
+                    gameState = IN_GAME;
+                    currentLevel.loadLevel(window, state);
+                }
+
+                break;
+            case 1:
+                optionsButton.setFillColor(sf::Color::White);
+                optionsButtonText.setFillColor(sf::Color::Black);
+
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter))
+                {
+                    optionsMenu(window, font, mainMenuBackgroundSprite);
+
+                    startButtonText.setPosition(screenWidth / 2 - 40, screenHeight / 2);
+                    optionsButtonText.setPosition(screenWidth / 2 - 40, screenHeight / 2 + 35);
+                    exitButtonText.setPosition(screenWidth / 2 - 40, screenHeight / 2 + 70);
+                    versionID.setPosition(5, screenHeight - 40);
+
+                    startGameButton.setPosition(screenWidth / 2 - 40, screenHeight / 2);
+                    optionsButton.setPosition(screenWidth / 2 - 40, screenHeight / 2 + 35);
+                    exitGameButton.setPosition(screenWidth / 2 - 40, screenHeight / 2 + 70);
+                }
+
+                break;
+            case 2:
+                exitGameButton.setFillColor(sf::Color::White);
+                exitButtonText.setFillColor(sf::Color::Black);
+
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter))
+                    exit(1);
+
+                break;
+            default:
+                break;
+            }
+            sf::sleep(sf::milliseconds(50));
 
             break;
         }
         case IN_GAME:
         {
             float dt = clock.restart().asSeconds();
-            sf::Event event;
-
-            sf::View view = window.getDefaultView();
 
             updateFPS(fpsText, dt, frame_time_micro);
 
             if (levelChanged == true)
             {
-                AmbientSFX.stop();
-                loadLevel(window, state, soundBuffer, AmbientSFX, color, color1, color2, floorColor);
+                currentLevel.AmbientSFX.stop();
+                free(currentLevel.map);
+                currentLevel.loadLevel(window, state);
                 levelChanged = false;
-            }
-
-            // handle SFML events
-
-            while (window.pollEvent(event))
-            {
-
-                switch (event.type)
-                {
-                case sf::Event::Closed:
-                    window.close();
-                    break;
-                case sf::Event::LostFocus:
-                    hasFocus = false;
-                    break;
-                case sf::Event::GainedFocus:
-                    hasFocus = true;
-                    break;
-                case sf::Event::Resized:
-                    // update the view to the new size of the window
-                    view.setSize({
-                                            static_cast<float>(event.size.width),
-                                            static_cast<float>(event.size.height)
-                        });
-                    window.setView(view);
-                    break;
-                default:
-                    break;
-                }
             }
 
             keyboardInput(hasFocus, player, size, dt);
@@ -841,7 +923,7 @@ int main()
                 {
                     float wall_x;
 
-                    color = ((mapPos.x % 2 == 0 && mapPos.y % 2 == 0) || (mapPos.x % 2 == 1 && mapPos.y % 2 == 1)) ? color1 : color2;
+                    currentLevel.color = ((mapPos.x % 2 == 0 && mapPos.y % 2 == 0) || (mapPos.x % 2 == 1 && mapPos.y % 2 == 1)) ? currentLevel.color1 : currentLevel.color2;
 
                     if (sideDist.x < sideDist.y)
                     {
@@ -886,7 +968,7 @@ int main()
                    // lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel), floorColor, sf::Vector2f(385, 129)));
                     lines.append(sf::Vertex(
                         sf::Vector2f((float)x, (float)groundPixel),
-                        floorColor,
+                        currentLevel.floorColor,
                         sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
 
                     groundPixel = int(wallHeight * cameraHeight + screenHeight * 0.5);
@@ -894,7 +976,7 @@ int main()
 
                     lines.append(sf::Vertex(
                         sf::Vector2f((float)x, (float)groundPixel),
-                        floorColor,
+                        currentLevel.floorColor,
                         sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)(ceilingTextureCoords.y + texture_wall_size - 1))));
 
                     //lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel), floorColor, sf::Vector2f(385, 129)));
@@ -904,7 +986,7 @@ int main()
                     //lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c, sf::Vector2f((float)ceilingTextureCoords.x, (float)(ceilingTextureCoords.y + texture_wall_size - 1))));
                     lines.append(sf::Vertex(
                         sf::Vector2f((float)x, (float)ceilingPixel),
-                        color,
+                        currentLevel.color,
                         sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
 
                     tile = getTile(mapPos.x, mapPos.y, currentLevel.ID);
@@ -915,7 +997,7 @@ int main()
 
                     lines.append(sf::Vertex(
                         sf::Vector2f((float)x, (float)ceilingPixel),
-                        color,
+                        currentLevel.color,
                         sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)(ceilingTextureCoords.y + texture_wall_size - 1))));
 
                     /*if (tile == 'N')
@@ -946,7 +1028,7 @@ int main()
 
                             // change color and find tile type
 
-                    color = (color == color1) ? color2 : color1;
+                    currentLevel.color = (currentLevel.color == currentLevel.color1) ? currentLevel.color2 : currentLevel.color1;
 
                 }
 
@@ -1019,33 +1101,11 @@ int main()
                     texture_coords.x += tex_x;
 
                     // illusion of shading by making horizontal walls darker
-                    color = sf::Color::White;
+                    currentLevel.color = sf::Color::White;
 
-                    switch (currentLevel.ID)
-                    {
-                    case 0:
-                        color.r /= 1;
-                        color.g /= 1;
-                        color.b /= 1;
-                        break;
-                    case 1:
-                        color.r /= wallShading;
-                        color.g /= wallShading;
-                        color.b /= wallShading;
-                        break;
-                    case 2:
-                        color.r /= wallShading;
-                        color.g /= wallShading;
-                        color.b /= wallShading;
-                        break;
-                    case 6:
-                        color.r /= wallShading;
-                        color.g /= wallShading;
-                        color.b /= wallShading;
-                        break;
-                    default:
-                        break;
-                    }
+                    currentLevel.color.r /= wallShading;
+                    currentLevel.color.g /= wallShading;
+                    currentLevel.color.b /= wallShading;
 
                     /*if (horizontal)
                     {
@@ -1058,22 +1118,21 @@ int main()
                     // add line to vertex buffer
                     lines.append(sf::Vertex(
                         sf::Vector2f((float)x, (float)drawStart),
-                        color,
+                        currentLevel.color,
                         sf::Vector2f((float)texture_coords.x, (float)texture_coords.y + 1)
                     ));
                     lines.append(sf::Vertex(
                         sf::Vector2f((float)x, (float)drawEnd),
-                        color,
+                        currentLevel.color,
                         sf::Vector2f((float)texture_coords.x, (float)(texture_coords.y + texture_wall_size - 1))
                     ));
                 }
             }
 
-            window.clear();
+
             window.draw(lines, state);
             window.draw(fpsText);
             frame_time_micro += clock.getElapsedTime().asMicroseconds();
-            window.display();
 
             break;
         }
@@ -1084,8 +1143,10 @@ int main()
         default:
             break;
         }
-        
+
+        window.display();
     }
+
 
     return 0;
 }

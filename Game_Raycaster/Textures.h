@@ -1,6 +1,7 @@
 #pragma once
+
 #include <unordered_map>
-#include<SFML/Graphics.hpp>
+#include <SFML/Graphics.hpp>
 
 // list of wall texture types, in order as they appear in the full texture
 

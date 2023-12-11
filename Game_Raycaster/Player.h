@@ -1,5 +1,5 @@
 #pragma once
-#include "Textures.h"
+#include <SFML/Graphics.hpp>
 
 class Player
 {
@@ -13,7 +13,7 @@ public:
     float playerRotateSpeed; // player rotation speed in radians per second
 
     Player();
-    void setPlayerNewPos(short x, short y);
+    void setPlayerNewPos(float x, float y);
     ~Player();
 
 private:

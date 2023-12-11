@@ -18,7 +18,7 @@ Player::~Player()
 
 }
 
-void Player::setPlayerNewPos(short x, short y)
+void Player::setPlayerNewPos(float x, float y)
 {
     position.x = x;
     position.y = y;
