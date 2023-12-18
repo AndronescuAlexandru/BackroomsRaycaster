@@ -29,11 +29,12 @@ W - dirty concrete wall
 class CurrentLevel
 {
 public:
-    short ID; // saves the current level number where the player will be
-    short MAP_WIDTH;
-    short MAP_HEIGHT;
-    short maxWallHeight;
+    int ID; // saves the current level number where the player will be
+    int MAP_WIDTH;
+    int MAP_HEIGHT;
+    int maxWallHeight;
     char* map;
+    int machineVolume;
 
     // colors used for floor and ceiling tiles in the current level
     sf::Color color;
@@ -43,14 +44,18 @@ public:
 
     // sounds used in the current level
     sf::SoundBuffer soundBuffer;
+    sf::SoundBuffer soundBuffer2;
     sf::SoundBuffer entitySoundBuffer;
     sf::SoundBuffer levelEntranceSoundBuffer;
     sf::SoundBuffer footstepsBuffer;
+    sf::SoundBuffer machineSFXBuffer;
 
     sf::Sound AmbientSFX;
+    sf::Sound AmbientSFX2;
     sf::Sound EntitySFX;
     sf::Sound levelEntranceSound;
     sf::Sound footsteps;
+    sf::Sound machineSFX;
 
     sf::Texture Textures; // map textures
 
@@ -60,6 +65,8 @@ public:
     ~CurrentLevel();
 
 };
+
+extern class CurrentLevel currentLevel;
 
 // level 0 map data
 
@@ -107,11 +114,16 @@ struct Level_2
     // map size
     const short MAP_WIDTH = 128;
     const short MAP_HEIGHT = 128;
-    const short maxWallHeight = 1;
+    const short maxWallHeight = 2;
+    const short machinePosX = 100;
+    const short machinePosY = 100;
+    short machineSFXVolume = 100;
 
     const char* mapFileAdress = "Data/Maps/Level_2.map";
     const char* textureAdress = "Data/Textures/level_0_textures.png";
-    const char* ambientSFXAdress = "Data/Audio/Level0LightAmbience.mp3";
+    const char* ambientSFXAdress = "Data/Audio/Level2_AmbientSFX.mp3";
+    const char* ambientSFXAdress2 = "Data/Audio/Level2_AmbientSFX2.mp3";
+    const char* machineSFXAdress = "Data/Audio/Level2_MachineSFX.mp3";
     const char* footstepsSFXAdress = "Data/Audio/ConcreteFootsteps.mp3";
     const char* entitySFXAdress = "Data/Audio/EntitySFX.mp3";
     const char* levelEntranceSFXAdress = "Data/Audio/FallingSFX.mp3";

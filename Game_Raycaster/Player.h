@@ -1,4 +1,7 @@
 #pragma once
+#ifndef PLAYER_H
+#define PLAYER_H
+
 #include <SFML/Graphics.hpp>
 
 class Player
@@ -16,6 +19,6 @@ public:
     void setPlayerNewPos(float x, float y);
     ~Player();
 
-private:
-
 };
+
+#endif // !PLAYER_H

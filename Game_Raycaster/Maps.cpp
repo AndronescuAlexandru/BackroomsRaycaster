@@ -9,12 +9,13 @@ extern float ceilingShading;
 extern float floorShading;
 
 extern Player player;
+extern bool noSaveFile;
 
 CurrentLevel::CurrentLevel()
 {
     ID = 0;
-    MAP_WIDTH = 128;
-    MAP_HEIGHT = 128;
+    MAP_WIDTH = 256;
+    MAP_HEIGHT = 256;
     maxWallHeight = 1;
 }
 
@@ -92,7 +93,8 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
 
         floorColor = sf::Color(178, 163, 106);
 
-        player.setPlayerNewPos(2, 2);
+        if(noSaveFile)
+            player.setPlayerNewPos(2, 2);
 
         break;
     }
@@ -141,11 +143,11 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         ceilingShading = 1.5;
         floorShading = 1.5;
 
-        color1 = sf::Color(154, 153, 149);
-        color2 = sf::Color(200, 200, 200); //sf::Color(129, 124, 121);
-        color.r /= ceilingShading;
-        color.g /= ceilingShading;
-        color.b /= ceilingShading;
+        color1 = sf::Color(100, 100, 100);
+        color2 = sf::Color(100, 100, 100); //sf::Color(129, 124, 121);
+        //color.r /= ceilingShading;
+        //color.g /= ceilingShading;
+        //color.b /= ceilingShading;
 
         floorColor = sf::Color(154, 153, 149);
         floorColor.r /= floorShading;
@@ -155,18 +157,45 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         break;
     case 2:
         loadMapFile(level_2.mapFileAdress);
-        if (!Textures.loadFromFile(level_1.textureAdress))
+        if (!Textures.loadFromFile(level_2.textureAdress))
         {
-            printf("Cannot open sound file %c\n", level_1.textureAdress);
+            printf("Cannot open file %c\n", level_2.textureAdress);
         }
 
-        if (!soundBuffer.loadFromFile(level_1.ambientSFXAdress))
+        if (!soundBuffer.loadFromFile(level_2.ambientSFXAdress))
         {
-            printf("Cannot open sound file %c\n", level_1.ambientSFXAdress);
+            printf("Cannot open sound file %c\n", level_2.ambientSFXAdress);
         }
 
-        if (!footstepsBuffer.loadFromFile(level_1.footstepsSFXAdress))
-            printf("Cannot open sound file %c\n", level_1.footstepsSFXAdress);
+        if (!soundBuffer2.loadFromFile(level_2.ambientSFXAdress2))
+        {
+            printf("Cannot open sound file %c\n", level_2.ambientSFXAdress2);
+        }
+
+        if (!footstepsBuffer.loadFromFile(level_2.footstepsSFXAdress))
+            printf("Cannot open sound file %c\n", level_2.footstepsSFXAdress);
+
+        if (!machineSFXBuffer.loadFromFile(level_2.machineSFXAdress))
+        {
+            printf("Cannot open sound file %c\n", level_2.ambientSFXAdress);
+        }
+
+        machineVolume = level_2.machineSFXVolume;
+
+        AmbientSFX.setBuffer(soundBuffer);
+        AmbientSFX.setVolume(10);
+        AmbientSFX.play();
+        AmbientSFX.setLoop(true);
+
+        AmbientSFX2.setBuffer(soundBuffer2);
+        AmbientSFX2.setVolume(20);
+        //AmbientSFX2.play();
+        AmbientSFX2.setLoop(true);
+
+        machineSFX.setBuffer(machineSFXBuffer);
+        machineSFX.setVolume(100);
+        machineSFX.play();
+        machineSFX.setLoop(true);
 
         footsteps.setBuffer(footstepsBuffer);
 
