@@ -548,9 +548,6 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
 
             // add floor
 
-            //groundHeight = getGroundHeight(mapPos.x, mapPos.y);
-            //floorColor = sf::Color::White;
-
            // lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel), floorColor, sf::Vector2f(385, 129)));
             lines.append(sf::Vertex(
                 sf::Vector2f((float)x, (float)groundPixel),
@@ -570,10 +567,22 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
             // add ceiling         
 
             //lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c, sf::Vector2f((float)ceilingTextureCoords.x, (float)(ceilingTextureCoords.y + texture_wall_size - 1))));
-            lines.append(sf::Vertex(
-                sf::Vector2f((float)x, (float)ceilingPixel),
-                currentLevel.color,
-                sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
+            
+            sf::Color color_c = sf::Color::Transparent;
+
+            if (tile == '$' && currentLevel.ID == 1)
+            {
+                ceilingPixel = int(-heightTile * wallHeight * (1.0 - cameraHeight) + screenHeight * 0.5);
+
+
+                lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel * 1.2), color_c, sf::Vector2f(385, 129))); // also adds floor reflexion
+            }
+            else {
+                lines.append(sf::Vertex(
+                    sf::Vector2f((float)x, (float)ceilingPixel),
+                    currentLevel.color,
+                    sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
+            }
 
             tile = GetTile(mapPos.x, mapPos.y, currentLevel.ID);
             heightTile = GetHeight(mapPos.x, mapPos.y, currentLevel.ID);
@@ -586,33 +595,7 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
                 currentLevel.color,
                 sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)(ceilingTextureCoords.y + texture_wall_size - 1))));
 
-            /*if (tile == 'N')
-            {
-                ceilingPixel = int(-wallHeight2 * (1.0 - cameraHeight) + screenHeight * 0.5);
-                color_c = sf::Color::Transparent;
-
-                lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel * 1.2), color_c,sf::Vector2f(385, 129))); // also adds floor reflexion
-            }
-            else
-                if (tile == '!')
-                {
-                    ceilingPixel = int(-wallHeight * (1.0 - cameraHeight) + screenHeight * 0.5);
-
-                    lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c,sf::Vector2f(385, 129))); // also adds floor reflexion
-                }
-                else
-                    if (tile == 'M')
-                    {
-                        ceilingPixel = int(-wallHeight3 * (1.0 - cameraHeight) + screenHeight * 0.5);
-                        lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c, sf::Vector2f(385, 129)));
-                    }
-                    else
-                    {
-                        ceilingPixel = int(-wallHeight * (1.0 - cameraHeight) + screenHeight * 0.5);
-                        lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c,sf::Vector2f(385, 129)));
-                    }*/
-
-                    // change color and find tile type
+            // change color and find tile type
 
             currentLevel.color = (currentLevel.color == currentLevel.color1) ? currentLevel.color2 : currentLevel.color1;
 
@@ -635,13 +618,13 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
                 if (tile == '$')
                 {
                     wallShading = 1;
-                    //lightSourcePosX = mapPos.x;
-                    //lightSourcePosY = mapPos.y;
+                    lightSourcePosX = mapPos.x;
+                    lightSourcePosY = mapPos.y;
                 }
                 else
                 {
                     wallShading = 1.5;
-                        /* distance = (mapPos.x + mapPos.y) - (lightSourcePosX + lightSourcePosY);
+                         distance = (mapPos.x + mapPos.y) - (lightSourcePosX + lightSourcePosY);
 
                         if (distance >= 1 && distance <= 2)
                         {
@@ -662,7 +645,7 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
                         {
                             wallShading = 1.5;
                             shading = 1.5;
-                        }*/
+                        }
                 }
                 break;
             case 2:
