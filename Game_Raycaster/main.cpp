@@ -1,4 +1,4 @@
-﻿// Version : 0.7.0
+﻿// Version : 0.7.1
 
 #include <iostream>
 #include <stdio.h>
@@ -15,15 +15,18 @@
 #include "Textures.h"
 #include "Constants.h"
 #include "Menus.h"
+#include "FileOperations.h"
 
-struct Level_2 level_2;
-struct Level_3 level_3;
-struct Level_Run level_Run;
-struct Level_5 level_5;
-struct Level_0_0_1 level_0_0_1;
+extern Player player;
+extern CurrentLevel currentLevel;
 
-Player player;
-CurrentLevel currentLevel;
+extern struct Level_0 level_0;
+extern struct Level_1 level_1;
+extern struct Level_2 level_2;
+extern struct Level_3 level_3;
+extern struct Level_Run level_Run;
+extern struct Level_5 level_5;
+extern struct Level_0_0_1 level_0_0_1;
 
 sf::SoundBuffer soundEffectsBuffer;
 sf::Sound soundEffect;
@@ -55,37 +58,6 @@ const int texture_wall_size = 128; // size(width and height) of each wall type i
 
 const float fps_refresh_time = 0.1; // time between FPS text refresh. FPS is smoothed out over this time
 
-class Sprite
-{
-public:
-    sf::Vector2f position;
-    sf::Texture texture;
-
-    Sprite(sf::Vector2f pos, const std::string& texturePath)
-        : position(pos)
-    {
-        texture.loadFromFile(texturePath);
-    }
-};
-
-bool PointInsideRect(const sf::Vector2f& point, const sf::FloatRect& rect)
-{
-    return point.x >= rect.left && point.x <= rect.left + rect.width &&
-        point.y >= rect.top && point.y <= rect.top + rect.height;
-}
-
-bool RayIntersectsRect(const sf::Vector2f& rayPos, const sf::Vector2f& rayDir, const sf::FloatRect& rect, sf::Vector2f& intersection)
-{
-    float t = (rect.left - rayPos.x) / rayDir.x;
-    if (t > 0 && PointInsideRect(rayPos + t * rayDir, rect))
-    {
-        intersection = rayPos + t * rayDir;
-        return true;
-    }
-    return false;
-}
-
-
 char GetTile(int x, int y, short level)
 {
     return currentLevel.map[y * currentLevel.MAP_WIDTH + x];
@@ -94,42 +66,6 @@ char GetTile(int x, int y, short level)
 float GetHeight(int x, int y, short level)
 {
     return currentLevel.maxWallHeight;
-}
-
-// check if a rectangular can move to given position without colliding with walls or
-// being outside of the map
-// position is considered the middle of the rectangle
-
-bool CanMove(sf::Vector2f position, sf::Vector2f size)
-{
-    // create the corners of the rectangle
-    sf::Vector2i upper_left(position - size / 2.0f);
-    sf::Vector2i lower_right(position + size / 2.0f);
-
-    if (upper_left.x < 0 || upper_left.y < 0 || lower_right.x >= currentLevel.MAP_WIDTH || lower_right.y >= currentLevel.MAP_HEIGHT)
-    {
-        return false; // out of map bounds
-    }
-
-    // loop through each map tile within the rectangle. The rectangle could be multiple tiles in size!
-    for (int y = upper_left.y; y <= lower_right.y; y++)
-    {
-        for (int x = upper_left.x; x <= lower_right.x; x++)
-        {
-            if (GetTile(x, y, currentLevel.ID) != '.' && GetTile(x, y, currentLevel.ID) != ';' && GetTile(x, y, currentLevel.ID) != ',')
-            {
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
-// rotate a given vector with given float value in radians and return the result
-
-sf::Vector2f RotateVec(sf::Vector2f vec, float value)
-{
-    return sf::Vector2f(vec.x * std::cos(value) - vec.y * std::sin(value), vec.x * std::sin(value) + vec.y * std::cos(value));
 }
 
 void UpdateFPS(sf::Text& fpsText, float dt, int64_t frame_time_micro)
@@ -190,39 +126,6 @@ void PlaySFX(short type, sf::Sound& soundEffect)
     default:
         break;
     }
-}
-
-bool is_empty(std::fstream& File)
-{
-    return File.peek() == std::fstream::traits_type::eof();
-}
-
-void LoadSaveFile()
-{
-    std::fstream saveFile("Data/UserData/SaveFile.sav");
-
-    if (!is_empty(saveFile))
-    {
-        saveFile >> currentLevel.ID;
-        saveFile >> player.position.x;
-        saveFile >> player.position.y;
-        noSaveFile = false;
-    }
-    else
-        noSaveFile = true;
-
-    saveFile.close();
-}
-
-void WriteSaveFile()
-{
-    std::ofstream saveFile("Data/UserData/SaveFile.sav", std::ofstream::trunc);
-
-    saveFile << currentLevel.ID << "\t";
-    saveFile << player.position.x << "\t";
-    saveFile << player.position.y << "\t";
-    saveFile.close();
-
 }
 
 void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) // handles keyboard input
@@ -372,10 +275,10 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
 
                 sf::Vector2f moveVec = player.direction * player.playerMoveSpeed * moveForward * dt;
 
-                if (CanMove(sf::Vector2f(player.position.x + moveVec.x, player.position.y), size)) {
+                if (player.CanMove(sf::Vector2f(player.position.x + moveVec.x, player.position.y), size)) {
                     player.position.x += moveVec.x;
                 }
-                if (CanMove(sf::Vector2f(player.position.x, player.position.y + moveVec.y), size)) {
+                if (player.CanMove(sf::Vector2f(player.position.x, player.position.y + moveVec.y), size)) {
                     player.position.y += moveVec.y;
                 }
             }
@@ -403,8 +306,8 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
             if (rotateDirection != 0.0)
             {
                 float rotation = player.playerRotateSpeed * rotateDirection * dt;
-                player.direction = RotateVec(player.direction, rotation);
-                player.plane = RotateVec(player.plane, rotation);
+                player.direction = player.Rotate(player.direction, rotation);
+                player.plane = player.Rotate(player.plane, rotation);
             }
 
             coordinatesRecentlyChanged = false; 
@@ -412,21 +315,6 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
 
     }
 }
-
-void WriteToUserSettings(std::ofstream &file)
-{
-    // opens UserSettings.dat file, delets its contents and then writes the new data
-
-    file << RENDER_DISTANCE << "\t";
-    file << screenHeight << "\t";
-    file << screenWidth << "\t";
-    file << menuSpriteScaleX << "\t";
-    file << menuSpriteScaleY << "\t";
-
-    file.close();
-}
-
-
 
 float square_root(float x)
 {
@@ -740,29 +628,6 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
     window.draw(lines, state);
 }
 
-void LoadUserSettingsData()
-{
-    std::fstream userSettingsData("Data/UserData/UserSettings.dat");
-
-    if (is_empty(userSettingsData)) // if the file is empty then adds the default data
-    {
-        userSettingsData << RENDER_DISTANCE << "\t";
-        userSettingsData << screenHeight << "\t";
-        userSettingsData << screenWidth << "\t";
-        userSettingsData << menuSpriteScaleX << "\t";
-        userSettingsData << menuSpriteScaleY << "\t";    
-    }
-    else
-    {
-        userSettingsData >> RENDER_DISTANCE;
-        userSettingsData >> screenHeight;
-        userSettingsData >> screenWidth;
-        userSettingsData >> menuSpriteScaleX;
-        userSettingsData >> menuSpriteScaleY;
-    }
-    userSettingsData.close();
-}
-
 int main()
 {
     sf::Font font;
@@ -776,24 +641,14 @@ int main()
     sf::Clock clock; // timer
     int64_t frame_time_micro = 0; // time needed to draw frames in microseconds
 
-    std::vector<Sprite> sprites;
-    sprites.push_back(Sprite(sf::Vector2f(2, 2), "Data/Textures/fridge.png"));
-
-    LoadSaveFile();
-    LoadUserSettingsData();
-
     if (!font.loadFromFile("Data/Fonts/arial.ttf")) //loads font
     {
         std::cout << "Cannot open font arial.ttf!\n";
         return 1;
     }
-    if (!currentLevel.entitySoundBuffer.loadFromFile("Data/Audio/EntitySFX.mp3"))
-    {
-        std::cout << "Cannot open sound file EntitySFX.mp3!\n";
-        return 1;
-    }
 
-    currentLevel.EntitySFX.setBuffer(currentLevel.entitySoundBuffer);
+    LoadSaveFile();
+    LoadUserSettingsData(); 
 
     sf::RenderWindow window(sf::VideoMode(screenWidth, screenHeight), "Backrooms"); // create window after loading everything up
     window.setSize(sf::Vector2u(screenWidth, screenHeight));

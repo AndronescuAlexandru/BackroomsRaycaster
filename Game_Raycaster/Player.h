@@ -17,6 +17,14 @@ public:
 
     Player();
     void setPlayerNewPos(float x, float y);
+
+    // check if player can move to given position without colliding with walls or
+    // being outside of the map
+    // player is constructed as a rectangle with position considered the middle of the rectangle
+    bool CanMove(sf::Vector2f position, sf::Vector2f size);
+
+    // rotates the player with given float value in radians and return the result
+    sf::Vector2f Rotate(sf::Vector2f vec, float value);
     ~Player();
 
 };
