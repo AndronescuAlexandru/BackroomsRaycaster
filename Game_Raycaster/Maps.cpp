@@ -1,8 +1,15 @@
 #include "Maps.h"
 #include "Player.h"
 
+class CurrentLevel currentLevel;
+
 struct Level_0 level_0;
 struct Level_1 level_1;
+struct Level_2 level_2;
+struct Level_3 level_3;
+struct Level_Run level_Run;
+struct Level_5 level_5;
+struct Level_0_0_1 level_0_0_1;
 
 extern float wallShading;
 extern float ceilingShading;
@@ -14,8 +21,8 @@ extern bool noSaveFile;
 CurrentLevel::CurrentLevel()
 {
     ID = 0;
-    MAP_WIDTH = 256;
-    MAP_HEIGHT = 256;
+    MAP_WIDTH = 384;
+    MAP_HEIGHT = 384;
     maxWallHeight = 1;
 }
 
@@ -54,6 +61,12 @@ void CurrentLevel::loadMapFile(const char* levelAdress)
 
 void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
 {
+    if (!entitySoundBuffer.loadFromFile("Data/Audio/EntitySFX.mp3"))
+    {
+        printf("Cannot open sound file EntitySFX.mp3!\n");
+    }
+
+    EntitySFX.setBuffer(currentLevel.entitySoundBuffer);
     // loads files specific for each level and set render state that uses the texture
     switch (ID)
     {
@@ -101,6 +114,10 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
     case 1:
         window.clear(sf::Color::Black);
         window.display();
+
+        MAP_HEIGHT = level_1.MAP_HEIGHT;
+        MAP_WIDTH = level_1.MAP_WIDTH;
+
         loadMapFile(level_1.mapFileAdress);
 
         if (!levelEntranceSoundBuffer.loadFromFile(level_1.levelEntranceSFXAdress))
@@ -127,9 +144,6 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
             printf("Cannot open sound file %c\n", level_1.footstepsSFXAdress);
 
         footsteps.setBuffer(footstepsBuffer);
-
-        MAP_HEIGHT = level_1.MAP_HEIGHT;
-        MAP_WIDTH = level_1.MAP_WIDTH;
         maxWallHeight = level_1.maxWallHeight;
 
         state.texture = &Textures;
@@ -156,6 +170,9 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
 
         break;
     case 2:
+        MAP_HEIGHT = level_2.MAP_HEIGHT;
+        MAP_WIDTH = level_2.MAP_WIDTH;
+
         loadMapFile(level_2.mapFileAdress);
         if (!Textures.loadFromFile(level_2.textureAdress))
         {
@@ -198,9 +215,6 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         machineSFX.setLoop(true);
 
         footsteps.setBuffer(footstepsBuffer);
-
-        MAP_HEIGHT = level_2.MAP_HEIGHT;
-        MAP_WIDTH = level_2.MAP_WIDTH;
         maxWallHeight = level_2.maxWallHeight;
 
         state.texture = &Textures;
@@ -224,6 +238,9 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
 
         break;
     case 3:
+        MAP_HEIGHT = level_3.MAP_HEIGHT;
+        MAP_WIDTH = level_3.MAP_WIDTH;
+
         loadMapFile(level_3.mapFileAdress);
         if (!Textures.loadFromFile(level_3.textureAdress))
         {
@@ -239,9 +256,6 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
             printf("Cannot open sound file %c\n", level_3.footstepsSFXAdress);
 
         footsteps.setBuffer(footstepsBuffer);
-
-        MAP_HEIGHT = level_3.MAP_HEIGHT;
-        MAP_WIDTH = level_3.MAP_WIDTH;
         maxWallHeight = level_3.maxWallHeight;
 
         state.texture = &Textures;
@@ -252,6 +266,9 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
 
         break;
     case 4:
+        MAP_HEIGHT = level_Run.MAP_HEIGHT;
+        MAP_WIDTH = level_Run.MAP_WIDTH;
+
         loadMapFile(level_Run.mapFileAdress);
         if (!Textures.loadFromFile(level_Run.textureAdress))
         {
@@ -267,9 +284,6 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
             printf("Cannot open sound file %c\n", level_Run.footstepsSFXAdress);
 
         footsteps.setBuffer(footstepsBuffer);
-
-        MAP_HEIGHT = level_Run.MAP_HEIGHT;
-        MAP_WIDTH = level_Run.MAP_WIDTH;
         maxWallHeight = level_Run.maxWallHeight;
 
         state.texture = &Textures;
@@ -288,6 +302,9 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
 
         break;
     case 5:
+        MAP_HEIGHT = level_5.MAP_HEIGHT;
+        MAP_WIDTH = level_5.MAP_WIDTH;
+
         loadMapFile(level_5.mapFileAdress);
         if (!Textures.loadFromFile(level_5.textureAdress))
         {
@@ -304,8 +321,6 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
 
         footsteps.setBuffer(footstepsBuffer);
 
-        MAP_HEIGHT = level_5.MAP_HEIGHT;
-        MAP_WIDTH = level_5.MAP_WIDTH;
         maxWallHeight = level_5.maxWallHeight;
 
         state.texture = &Textures;
@@ -319,6 +334,8 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         floorColor.b /= floorShading;
         break;
     case 6:
+        MAP_HEIGHT = level_0_0_1.MAP_HEIGHT;
+        MAP_WIDTH = level_0_0_1.MAP_WIDTH;
 
         loadMapFile(level_0_0_1.mapFileAdress);
         if (!Textures.loadFromFile(level_0_0_1.textureAdress))
@@ -344,8 +361,6 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         player.position.x = 1.6;
         player.position.y = 2.5;
 
-        MAP_HEIGHT = level_0_0_1.MAP_HEIGHT;
-        MAP_WIDTH = level_0_0_1.MAP_WIDTH;
         maxWallHeight = level_0_0_1.maxWallHeight;
 
         state.texture = &Textures;

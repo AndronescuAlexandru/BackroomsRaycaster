@@ -66,8 +66,6 @@ public:
 
 };
 
-extern class CurrentLevel currentLevel;
-
 // level 0 map data
 
 struct Level_0
@@ -85,15 +83,13 @@ struct Level_0
 
 };
 
-extern struct Level_0 level_0;
-
 // level 1 map data
 
 struct Level_1
 {
     // map size
-    const short MAP_WIDTH = 128;
-    const short MAP_HEIGHT = 128;
+    const short MAP_WIDTH = 256;
+    const short MAP_HEIGHT = 256;
     const short maxWallHeight = 3;
 
     const char* mapFileAdress = "Data/Maps/Level_1.map";
@@ -104,8 +100,6 @@ struct Level_1
     const char* levelEntranceSFXAdress = "Data/Audio/FallingSFX.mp3";
 
 };
-
-extern struct Level_0 level_0;
 
 // level 2 map data
 
@@ -130,8 +124,6 @@ struct Level_2
 
 };
 
-extern struct Level_2 level_2;
-
 // level 3 map data
 
 struct Level_3
@@ -149,8 +141,6 @@ struct Level_3
     const char* levelEntranceSFXAdress = "Data/Audio/FallingSFX.mp3";
 
 };
-
-extern struct Level_3 level_3;
 
 // level 4 map data
 
@@ -170,8 +160,6 @@ struct Level_4
 
 };
 
-extern struct Level_4 level_4;
-
 // level 5 map data
 
 struct Level_5
@@ -189,8 +177,6 @@ struct Level_5
     const char* levelEntranceSFXAdress = "Data/Audio/FallingSFX.mp3";
 
 };
-
-extern struct Level_5 level_5;
 
 // level Run map data
 
@@ -210,15 +196,13 @@ struct Level_Run
 
 };
 
-extern struct Level_Run level_Run;
-
 // level 0.01
 
 struct Level_0_0_1
 {
     // map size
     const short MAP_WIDTH = 64;
-    const short MAP_HEIGHT = 384;
+    const short MAP_HEIGHT = 385;
 
     const short maxWallHeight = 3;
 
@@ -231,7 +215,5 @@ struct Level_0_0_1
 
 
 };
-
-extern struct Level_0_0_1 level_0_0_1;
 
 #endif

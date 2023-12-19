@@ -136,16 +136,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="FileOperations.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Maps.cpp" />
     <ClCompile Include="Menus.cpp" />
     <ClCompile Include="Player.cpp" />
+    <ClCompile Include="Sprites.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Constants.h" />
+    <ClInclude Include="FileOperations.h" />
     <ClInclude Include="Maps.h" />
     <ClInclude Include="Menus.h" />
     <ClInclude Include="Player.h" />
+    <ClInclude Include="Sprites.h" />
     <ClInclude Include="Textures.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
