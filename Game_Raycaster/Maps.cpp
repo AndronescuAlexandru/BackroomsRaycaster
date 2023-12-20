@@ -7,6 +7,7 @@ struct Level_0 level_0;
 struct Level_1 level_1;
 struct Level_2 level_2;
 struct Level_3 level_3;
+struct Level_4 level_4;
 struct Level_Run level_Run;
 struct Level_5 level_5;
 struct Level_0_0_1 level_0_0_1;
@@ -17,6 +18,9 @@ extern float floorShading;
 
 extern Player player;
 extern bool noSaveFile;
+extern sf::Clock globalClock;
+
+extern void SetBlackScreen(sf::RenderWindow& window, sf::Time seconds);
 
 CurrentLevel::CurrentLevel()
 {
@@ -28,6 +32,8 @@ CurrentLevel::CurrentLevel()
 
 CurrentLevel::~CurrentLevel()
 {
+    free(map);
+    free(heightMap);
 }
 
 void CurrentLevel::loadMapFile(const char* levelAdress)
@@ -57,6 +63,35 @@ void CurrentLevel::loadMapFile(const char* levelAdress)
     }
 
     levelFile.close();
+}
+
+void CurrentLevel::loadHeightMapFile(const char* levelHeightMapAdress)
+{
+    std::ifstream heightMapFile(levelHeightMapAdress);
+
+    heightMap = (int*)malloc((MAP_HEIGHT * MAP_WIDTH) * sizeof(int));
+
+    if (heightMap == nullptr)
+    {
+        printf("Could not allocate memory for pointer level_0.map!");
+        return;
+    }
+
+    if (!heightMapFile.is_open())
+    {
+        printf("Could not open data file Level_0.txt or file doesn't exist; Exiting program");
+        free(map);
+        return;
+    }
+
+    for (int i = 0; i <= MAP_HEIGHT * MAP_WIDTH; i++)
+    {
+        heightMapFile >> heightMap[i];
+        if (heightMapFile.eof())
+            break;
+    }
+
+    heightMapFile.close();
 }
 
 void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
@@ -112,9 +147,6 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         break;
     }
     case 1:
-        window.clear(sf::Color::Black);
-        window.display();
-
         MAP_HEIGHT = level_1.MAP_HEIGHT;
         MAP_WIDTH = level_1.MAP_WIDTH;
 
@@ -128,7 +160,7 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         levelEntranceSound.setBuffer(levelEntranceSoundBuffer);
         levelEntranceSound.play();
 
-        sf::sleep(sf::seconds(2));
+        SetBlackScreen(window, sf::seconds(2));
 
         if (!Textures.loadFromFile(level_1.textureAdress))
         {
@@ -242,6 +274,8 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         MAP_WIDTH = level_3.MAP_WIDTH;
 
         loadMapFile(level_3.mapFileAdress);
+        loadHeightMapFile(level_3.heightMapFileAdress);
+
         if (!Textures.loadFromFile(level_3.textureAdress))
         {
             printf("Cannot open sound file %c\n", level_3.textureAdress);
@@ -260,45 +294,65 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
 
         state.texture = &Textures;
 
-        color1 = sf::Color(43, 162, 198);
-        color2 = sf::Color(96, 96, 96);
-        floorColor = sf::Color(96, 96, 96);
+        wallShading = 1.2;
+        ceilingShading = 1;
+        floorShading = 1;
+
+        color1 = sf::Color(200, 200, 200);
+        color2 = sf::Color(200, 200, 200);
+        floorColor = sf::Color(200, 200, 200);
 
         break;
     case 4:
-        MAP_HEIGHT = level_Run.MAP_HEIGHT;
-        MAP_WIDTH = level_Run.MAP_WIDTH;
+        globalClock.restart();
+        MAP_HEIGHT = level_4.MAP_HEIGHT;
+        MAP_WIDTH = level_4.MAP_WIDTH;
 
-        loadMapFile(level_Run.mapFileAdress);
-        if (!Textures.loadFromFile(level_Run.textureAdress))
+        window.clear(sf::Color::Black);
+        window.display();
+
+        loadMapFile(level_4.mapFileAdress);
+        loadHeightMapFile(level_4.heightMapFileAdress);
+
+        if (!levelEntranceSoundBuffer.loadFromFile(level_4.levelEntranceSFXAdress))
         {
-            printf("Cannot open sound file %c\n", level_Run.textureAdress);
+            printf("Cannot open sound file ElevatorFunctioning.mp3!\n");
         }
 
-        if (!soundBuffer.loadFromFile(level_Run.ambientSFXAdress))
+        levelEntranceSound.setBuffer(levelEntranceSoundBuffer);
+        levelEntranceSound.play();
+
+        if (!Textures.loadFromFile(level_4.textureAdress))
         {
-            printf("Cannot open sound file %c\n", level_Run.ambientSFXAdress);
+            printf("Cannot open sound file %c\n", level_4.textureAdress);
         }
 
-        if (!footstepsBuffer.loadFromFile(level_Run.footstepsSFXAdress))
-            printf("Cannot open sound file %c\n", level_Run.footstepsSFXAdress);
+        if (!soundBuffer.loadFromFile(level_4.ambientSFXAdress))
+        {
+            printf("Cannot open sound file %c\n", level_4.ambientSFXAdress);
+        }
+
+        if (!footstepsBuffer.loadFromFile(level_4.footstepsSFXAdress))
+            printf("Cannot open sound file %c\n", level_4.footstepsSFXAdress);
 
         footsteps.setBuffer(footstepsBuffer);
-        maxWallHeight = level_Run.maxWallHeight;
+        maxWallHeight = level_4.maxWallHeight;
 
         state.texture = &Textures;
 
-        color1 = sf::Color(154, 153, 149);
-        color2 = sf::Color(154, 153, 149);
-
-        floorColor = sf::Color(154, 153, 149);
-        floorColor.r /= floorShading;
-        floorColor.g /= floorShading;
-        floorColor.b /= floorShading;
-
         AmbientSFX.setBuffer(soundBuffer);
+        AmbientSFX.setVolume(10);
         AmbientSFX.play();
         AmbientSFX.setLoop(true);
+
+        wallShading = 1.1;
+
+        color1 = sf::Color(175, 175, 175);
+        color2 = sf::Color(255, 255, 255);
+
+        floorColor = sf::Color(175, 175, 175);
+
+        player.setPlayerNewPos(1.5, 1.5);
 
         break;
     case 5:

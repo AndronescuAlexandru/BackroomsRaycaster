@@ -24,12 +24,14 @@ extern struct Level_0 level_0;
 extern struct Level_1 level_1;
 extern struct Level_2 level_2;
 extern struct Level_3 level_3;
+extern struct Level_4 level_4;
 extern struct Level_Run level_Run;
 extern struct Level_5 level_5;
 extern struct Level_0_0_1 level_0_0_1;
 
 sf::SoundBuffer soundEffectsBuffer;
 sf::Sound soundEffect;
+sf::Clock globalClock;
 
 bool keyboardPressed = false;
 bool levelChanged = false;
@@ -65,6 +67,9 @@ char GetTile(int x, int y, short level)
 
 float GetHeight(int x, int y, short level)
 {
+    if (level == 4 || level == 3)
+        return currentLevel.heightMap[y * currentLevel.MAP_WIDTH + x];
+
     return currentLevel.maxWallHeight;
 }
 
@@ -123,6 +128,22 @@ void PlaySFX(short type, sf::Sound& soundEffect)
         soundEffect.play();
         break;
     }
+    case 2:
+    {
+        if (!soundEffectsBuffer.loadFromFile("Data/Audio/ElevatorDoorOpening.mp3"))
+            std::cout << "Could not open sound file NoclipSFX1.mp3!\n";
+
+        soundEffect.setBuffer(soundEffectsBuffer);
+        soundEffect.play();
+    }
+    case 3:
+    {
+        if (!soundEffectsBuffer.loadFromFile("Data/Audio/ElevatorDoorClosing.mp3"))
+            std::cout << "Could not open sound file NoclipSFX1.mp3!\n";
+
+        soundEffect.setBuffer(soundEffectsBuffer);
+        soundEffect.play();
+    }
     default:
         break;
     }
@@ -137,6 +158,7 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
 
         // moving forward or backwards (1.0 or -1.0)
         float moveForward = 0.0;
+        bool elevatorCalled = false;
 
         if (gameState == IN_GAME)
         {
@@ -257,6 +279,16 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
                 {
                     currentLevel.ID = 2;
                     PlaySFX(0, soundEffect);
+
+                    levelChanged = true;
+                }
+                
+                if (currentLevel.ID == 2 && (int)player.position.x == 78 && (int)player.position.y == 119 && elevatorCalled == false)
+                {
+                    PlaySFX(2, soundEffect);
+                    globalClock.restart();
+                    elevatorCalled = true;
+                    currentLevel.ID_NextLevel = 4;
 
                     levelChanged = true;
                 }
@@ -390,6 +422,9 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
 
             currentLevel.color = ((mapPos.x % 2 == 0 && mapPos.y % 2 == 0) || (mapPos.x % 2 == 1 && mapPos.y % 2 == 1)) ? currentLevel.color1 : currentLevel.color2;
 
+            if (tile == ',')
+                currentLevel.color = sf::Color(255, 255, 255);
+
             /*if (tile == ',')
             {
                 currentLevel.color = sf::Color(140, 140, 140);
@@ -456,21 +491,26 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
 
             //lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c, sf::Vector2f((float)ceilingTextureCoords.x, (float)(ceilingTextureCoords.y + texture_wall_size - 1))));
             
-            sf::Color color_c = sf::Color::Transparent;
+            /*sf::Color color_c = sf::Color::Transparent;
 
             if (tile == '$' && currentLevel.ID == 1)
             {
-                ceilingPixel = int(-heightTile * wallHeight * (1.0 - cameraHeight) + screenHeight * 0.5);
+                //ceilingPixel = int(-heightTile * wallHeight * (1.0 - cameraHeight) + screenHeight * 0.5);
 
-
-                lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel * 1.2), color_c, sf::Vector2f(385, 129))); // also adds floor reflexion
+                
+                lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel * 1.5), color_c, sf::Vector2f(385, 129))); // also adds floor reflexion
             }
             else {
                 lines.append(sf::Vertex(
                     sf::Vector2f((float)x, (float)ceilingPixel),
                     currentLevel.color,
                     sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
-            }
+            }*/
+
+            lines.append(sf::Vertex(
+                sf::Vector2f((float)x, (float)ceilingPixel),
+                currentLevel.color,
+                sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
 
             tile = GetTile(mapPos.x, mapPos.y, currentLevel.ID);
             heightTile = GetHeight(mapPos.x, mapPos.y, currentLevel.ID);
@@ -537,13 +577,13 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
                 }
                 break;
             case 2:
-                wallTextureNum = (int)level0_wallTypes.find(tile)->second;
+                wallTextureNum = (int)level2_wallTypes.find(tile)->second;
                 break;
             case 3:
-                wallTextureNum = (int)wallTypes.find(tile)->second;
+                wallTextureNum = (int)level3_wallTypes.find(tile)->second;
                 break;
             case 4:
-                wallTextureNum = (int)levelRun_wallTypes.find(tile)->second;
+                wallTextureNum = (int)level4_wallTypes.find(tile)->second;
                 break;
             case 5:
                 wallTextureNum = (int)wallTypes.find(tile)->second;
@@ -611,6 +651,29 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
     window.draw(lines, state);
 }
 
+void GoToNextLevel(sf::RenderWindow &window, sf::RenderStates state)
+{
+    currentLevel.AmbientSFX.stop();
+    currentLevel.AmbientSFX2.stop();
+    currentLevel.machineSFX.stop();
+    free(currentLevel.map);
+    free(currentLevel.heightMap);
+    currentLevel.ID = currentLevel.ID_NextLevel;
+    currentLevel.loadLevel(window, state);
+    levelChanged = false;
+}
+
+void SetBlackScreen(sf::RenderWindow& window, sf::Time seconds)
+{
+    sf::Clock clock;
+    window.clear(sf::Color::Black);
+    window.display();
+    while (clock.getElapsedTime().asSeconds() != seconds.asSeconds())
+    {
+
+    }
+}
+
 int main()
 {
     sf::Font font;
@@ -629,7 +692,7 @@ int main()
         std::cout << "Cannot open font arial.ttf!\n";
         return 1;
     }
-
+   
     LoadSaveFile();
     LoadUserSettingsData(); 
 
@@ -689,16 +752,22 @@ int main()
 
             if (levelChanged == true)
             {
-                currentLevel.AmbientSFX.stop();
-                currentLevel.AmbientSFX2.stop();
-                currentLevel.machineSFX.stop();
-                free(currentLevel.map);
-                currentLevel.loadLevel(window, state);
-                levelChanged = false;
+                if (currentLevel.ID_NextLevel == 4)
+                {
+                    if (globalClock.getElapsedTime().asSeconds() >= 2)
+                    {
+                        SetBlackScreen(window, sf::seconds(1));
+                        GoToNextLevel(window, state);
+                    }
+                }
+                else
+                {
+                    GoToNextLevel(window, state);
+                }
             }
 
             KeyboardInput(hasFocus, player, size, dt);
-            //printf("X: %f Y: %f player dir : %f", player.position.x, player.position.y, player.direction);
+            //printf("X: %f Y: %f ", player.position.x, player.position.y);
             //system("cls");
 
             lines.resize(0);
@@ -723,6 +792,13 @@ int main()
                     volume = distanceX + distanceY;
 
                 currentLevel.machineSFX.setVolume(100 - volume);
+            }
+
+            if (currentLevel.ID == 4 && globalClock.getElapsedTime().asSeconds() >= 10 && (player.position.x >= 1.0 && player.position.x < 2.0) && 
+                (player.position.y >= 1.0 && player.position.y <= 2.0))
+            {
+                SetBlackScreen(window, sf::seconds(1));
+                player.setPlayerNewPos(1.5, 4.5);
             }
 
             Raycasting(window, state, lines);
