@@ -200,6 +200,8 @@ void OptionsMenu(sf::RenderWindow& window, sf::Font font, sf::Sprite& menuBackgr
     sf::RectangleShape setRes_1920_1080_Button(sf::Vector2f(120, 30));
     sf::RectangleShape decreaseDD(sf::Vector2f(30, 30));
     sf::RectangleShape increaseDD(sf::Vector2f(30, 30));
+    sf::RectangleShape audio_tab(sf::Vector2f(50, 30));
+    sf::RectangleShape video_tab(sf::Vector2f(50, 30));
 
     sf::Text gameResSectionText;
     sf::Text ResText_640_480;
@@ -209,8 +211,10 @@ void OptionsMenu(sf::RenderWindow& window, sf::Font font, sf::Sprite& menuBackgr
     sf::Text ResText_1600_900;
     sf::Text ResText_1920_1080;
     sf::Text drawDistanceValue;
-    sf::Text plus;
-    sf::Text minus;
+    sf::Text video_tab_text;
+    sf::Text audio_tab_text;
+    sf::Text plus_text;
+    sf::Text minus_text;
 
     // text properties
 
@@ -223,6 +227,8 @@ void OptionsMenu(sf::RenderWindow& window, sf::Font font, sf::Sprite& menuBackgr
     ResText_1920_1080.setFont(font);
     gameResSectionText.setFont(font);
     drawDistanceValue.setFont(font);
+    video_tab_text.setFont(font);
+    audio_tab_text.setFont(font);
 
     //setting text character size
     ResText_640_480.setCharacterSize(20);
@@ -233,6 +239,8 @@ void OptionsMenu(sf::RenderWindow& window, sf::Font font, sf::Sprite& menuBackgr
     ResText_1920_1080.setCharacterSize(20);
     gameResSectionText.setCharacterSize(20);
     drawDistanceValue.setCharacterSize(20);
+    video_tab_text.setCharacterSize(20);
+    audio_tab_text.setCharacterSize(20);
 
     //setting text string
     ResText_640_480.setString("640x480");
@@ -243,6 +251,8 @@ void OptionsMenu(sf::RenderWindow& window, sf::Font font, sf::Sprite& menuBackgr
     ResText_1920_1080.setString("1920x1080");
     gameResSectionText.setString("Screen resolution (Cureent screen resolution " + std::to_string(screenWidth) + 'x' + std::to_string(screenHeight) + ')');
     drawDistanceValue.setString("Draw distance " + std::to_string(RENDER_DISTANCE));
+    video_tab_text.setString("Video");
+    audio_tab_text.setString("Audio");
 
     //setting text color
     ResText_640_480.setFillColor(sf::Color::White);
@@ -263,6 +273,8 @@ void OptionsMenu(sf::RenderWindow& window, sf::Font font, sf::Sprite& menuBackgr
     ResText_1600_900.setPosition(5, 170);
     ResText_1920_1080.setPosition(5, 205);
     drawDistanceValue.setPosition(5, 240);
+    video_tab_text.setPosition(5, 5);
+    audio_tab_text.setPosition(5, 5);
 
     // button properties
 
@@ -285,6 +297,8 @@ void OptionsMenu(sf::RenderWindow& window, sf::Font font, sf::Sprite& menuBackgr
     setRes_1920_1080_Button.setPosition(sf::Vector2f(5, 205));
     decreaseDD.setPosition(sf::Vector2f(5, 270));
     increaseDD.setPosition(sf::Vector2f(50, 270));
+    audio_tab.setPosition(sf::Vector2f(5,5));
+    video_tab.setPosition(sf::Vector2f(5,5));
 
     while (true)
     {
@@ -300,6 +314,8 @@ void OptionsMenu(sf::RenderWindow& window, sf::Font font, sf::Sprite& menuBackgr
         window.draw(setRes_1280_720_Button);
         window.draw(setRes_1600_900_Button);
         window.draw(setRes_1920_1080_Button);
+        window.draw(audio_tab);
+        window.draw(video_tab);
 
         window.draw(ResText_640_480);
         window.draw(ResText_800_600);
@@ -311,6 +327,9 @@ void OptionsMenu(sf::RenderWindow& window, sf::Font font, sf::Sprite& menuBackgr
         window.draw(drawDistanceValue);
         window.draw(decreaseDD);
         window.draw(increaseDD);
+
+        window.draw(audio_tab_text);
+        window.draw(video_tab_text);
 
         window.display();
 
@@ -332,6 +351,8 @@ void OptionsMenu(sf::RenderWindow& window, sf::Font font, sf::Sprite& menuBackgr
         setRes_1280_720_Button.setFillColor(sf::Color::Black);
         setRes_1600_900_Button.setFillColor(sf::Color::Black);
         setRes_1920_1080_Button.setFillColor(sf::Color::Black);
+        audio_tab.setFillColor(sf::Color::Black);
+        video_tab.setFillColor(sf::Color::Black);
 
         ResText_640_480.setFillColor(sf::Color::White);
         ResText_800_600.setFillColor(sf::Color::White);
@@ -339,6 +360,8 @@ void OptionsMenu(sf::RenderWindow& window, sf::Font font, sf::Sprite& menuBackgr
         ResText_1280_720.setFillColor(sf::Color::White);
         ResText_1600_900.setFillColor(sf::Color::White);
         ResText_1920_1080.setFillColor(sf::Color::White);
+        audio_tab_text.setFillColor(sf::Color::White);
+        video_tab_text.setFillColor(sf::Color::White);
 
         decreaseDD.setFillColor(sf::Color::Black);
         increaseDD.setFillColor(sf::Color::Black);

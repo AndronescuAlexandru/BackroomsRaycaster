@@ -273,6 +273,7 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         MAP_HEIGHT = level_3.MAP_HEIGHT;
         MAP_WIDTH = level_3.MAP_WIDTH;
 
+        SetBlackScreen(window, sf::seconds(1));
         loadMapFile(level_3.mapFileAdress);
         loadHeightMapFile(level_3.heightMapFileAdress);
 
@@ -301,6 +302,8 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         color1 = sf::Color(200, 200, 200);
         color2 = sf::Color(200, 200, 200);
         floorColor = sf::Color(200, 200, 200);
+
+        player.setPlayerNewPos(30.0, 40.0);
 
         break;
     case 4:

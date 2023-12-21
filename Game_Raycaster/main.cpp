@@ -283,12 +283,27 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
                     levelChanged = true;
                 }
                 
-                if (currentLevel.ID == 2 && (int)player.position.x == 78 && (int)player.position.y == 119 && elevatorCalled == false)
+                if (currentLevel.ID == 2 && (int)player.position.x == 34 && (int)player.position.y == 247 && elevatorCalled == false)
                 {
                     PlaySFX(2, soundEffect);
                     globalClock.restart();
                     elevatorCalled = true;
                     currentLevel.ID_NextLevel = 4;
+
+                    levelChanged = true;
+                }
+
+                if (currentLevel.ID == 2 && (int)player.position.x == 199 && (int)player.position.y == 99 && elevatorCalled == false)
+                {
+                    PlaySFX(0, soundEffect);
+                    player.setPlayerNewPos(201, 99);
+                    coordinatesRecentlyChanged = true;
+                }
+
+                if (currentLevel.ID == 2 && (int)player.position.x == 124 && (int)player.position.y == 177 && elevatorCalled == false)
+                {
+                    PlaySFX(0, soundEffect);
+                    currentLevel.ID_NextLevel = 3;
 
                     levelChanged = true;
                 }
