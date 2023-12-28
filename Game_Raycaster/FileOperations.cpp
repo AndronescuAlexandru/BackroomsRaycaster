@@ -53,6 +53,7 @@ void WriteToUserSettings(std::ofstream& file)
     file << screenWidth << "\t";
     file << menuSpriteScaleX << "\t";
     file << menuSpriteScaleY << "\t";
+    file << master_sound_volume << "\t";
 
     file.close();
 }
@@ -68,6 +69,7 @@ void LoadUserSettingsData()
         userSettingsData << screenWidth << "\t";
         userSettingsData << menuSpriteScaleX << "\t";
         userSettingsData << menuSpriteScaleY << "\t";
+        userSettingsData << master_sound_volume << "\t";
     }
     else
     {
@@ -76,6 +78,7 @@ void LoadUserSettingsData()
         userSettingsData >> screenWidth;
         userSettingsData >> menuSpriteScaleX;
         userSettingsData >> menuSpriteScaleY;
+        userSettingsData >> master_sound_volume;
     }
     userSettingsData.close();
 }

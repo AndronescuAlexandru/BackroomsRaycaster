@@ -9,6 +9,7 @@
 extern int RENDER_DISTANCE;
 extern int gameState;
 extern int screenWidth, screenHeight;
+extern unsigned int master_sound_volume;
 extern float menuSpriteScaleX;
 extern float menuSpriteScaleY;
 extern bool debugMode;

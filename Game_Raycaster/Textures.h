@@ -8,11 +8,14 @@
 
 // list of wall texture types, in order as they appear in the full texture
 
-enum class TexturesLevel0_1 {
+enum class TexturesLevel0 {
     YellowWall,
     YellowCarpet,
     YellowWallRedDoor,
-    NoClipYellowWall,
+    NoClipYellowWall,  
+};
+
+enum class TexturesLevel1 {  
     ConcreteWallWithLamp,
     CrackedConcrete,
     ConcreteTexture1,
@@ -20,6 +23,7 @@ enum class TexturesLevel0_1 {
     ConcreteTexture1Door,
     ConcreteTexture2Door,
     ConcreteFloor,
+    ConcreteTexture3,
 };
 
 enum class TexturesLevel2 {
@@ -102,21 +106,26 @@ const std::unordered_map<char, Textures> wallTypes
     {'S', Textures::HotelWallPainting1 },
 };
 
-const std::unordered_map<char, TexturesLevel0_1> level0_wallTypes
+const std::unordered_map<char, TexturesLevel0> level0_wallTypes
 {
-    {'#', TexturesLevel0_1::YellowWall},
-    {'@', TexturesLevel0_1::YellowWallRedDoor},
-    {'*', TexturesLevel0_1::NoClipYellowWall},
-    {'.', TexturesLevel0_1::YellowCarpet},
-    {'@', TexturesLevel0_1::ConcreteTexture2},
-    {'%', TexturesLevel0_1::ConcreteTexture1},
-    {'C', TexturesLevel0_1::CrackedConcrete},
-    {'S', TexturesLevel0_1::ConcreteTexture2Door},
-    {'D', TexturesLevel0_1::ConcreteTexture1Door},
-    {'$', TexturesLevel0_1::ConcreteWallWithLamp},
-    {';', TexturesLevel0_1::ConcreteFloor},
-    {',', TexturesLevel0_1::ConcreteFloor}, // used for simulating light on ceilings and floors from light sources
+    {'#', TexturesLevel0::YellowWall},
+    {'@', TexturesLevel0::YellowWallRedDoor},
+    {'*', TexturesLevel0::NoClipYellowWall},
+    {'.', TexturesLevel0::YellowCarpet},
     
+};
+
+const std::unordered_map<char, TexturesLevel1> level1_wallTypes
+{   
+    {'@', TexturesLevel1::ConcreteTexture2},
+    {'%', TexturesLevel1::ConcreteTexture1},
+    {'C', TexturesLevel1::CrackedConcrete},
+    {'S', TexturesLevel1::ConcreteTexture2Door},
+    {'D', TexturesLevel1::ConcreteTexture1Door},
+    {'$', TexturesLevel1::ConcreteWallWithLamp},
+    {';', TexturesLevel1::ConcreteFloor},
+    {',', TexturesLevel1::ConcreteFloor}, // used for simulating light on ceilings and floors from light sources
+
 };
 
 const std::unordered_map<char, TexturesLevel2> level2_wallTypes
@@ -129,8 +138,8 @@ const std::unordered_map<char, TexturesLevel2> level2_wallTypes
     {'$', TexturesLevel2::MachineTexture},
     {'(', TexturesLevel2::ConcreteWallWithPipes2},
     {')', TexturesLevel2::ConcreteWallWithPipes3},
-    {'.', TexturesLevel2::ConcreteFloor},
-    {',', TexturesLevel2::ConcreteFloor}, // used for simulating light on ceilings and floors from light sources
+    {'.', TexturesLevel2::ConcreteTexture},
+    {',', TexturesLevel2::ConcreteTexture}, // used for simulating light on ceilings and floors from light sources
 };
 
 const std::unordered_map<char, TexturesLevel3> level3_wallTypes
@@ -142,7 +151,7 @@ const std::unordered_map<char, TexturesLevel3> level3_wallTypes
     {'(', TexturesLevel3::ElevatorInsideFront},
     {')', TexturesLevel3::ElevatorInsideBack},
     {'!', TexturesLevel3::ElevatorInsideSides},
-    {',', TexturesLevel3::MachineTexture},
+    {',', TexturesLevel3::ElevatorInsideFloor},
     {'$', TexturesLevel3::MachineTexture},  
 };
 
