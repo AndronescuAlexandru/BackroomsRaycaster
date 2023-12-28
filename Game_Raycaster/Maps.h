@@ -26,6 +26,8 @@ W - dirty concrete wall
 
 */
 
+extern unsigned int master_sound_volume;
+
 class CurrentLevel
 {
 public:
@@ -79,7 +81,7 @@ struct Level_0
     const short maxWallHeight = 3;
 
     const char* mapFileAdress = "Data/Maps/Level_0.map";
-    const char* textureAdress = "Data/Textures/level_0_1_textures.png";
+    const char* textureAdress = "Data/Textures/level_0_textures.png";
     const char* ambientSFXAdress = "Data/Audio/Level0LightAmbience.mp3";
     const char* footstepsSFXAdress = "Data/Audio/CarpetFootsteps.mp3";
     const char* entitySFXAdress = "Data/Audio/EntitySFX.mp3";
@@ -96,7 +98,7 @@ struct Level_1
     const short maxWallHeight = 3;
 
     const char* mapFileAdress = "Data/Maps/Level_1.map";
-    const char* textureAdress = "Data/Textures/level_0_1_textures.png";
+    const char* textureAdress = "Data/Textures/level_1_textures.png";
     const char* ambientSFXAdress = "Data/Audio/Level0LightAmbience.mp3";
     const char* footstepsSFXAdress = "Data/Audio/ConcreteFootsteps.mp3";
     const char* entitySFXAdress = "Data/Audio/EntitySFX.mp3";

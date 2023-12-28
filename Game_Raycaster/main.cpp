@@ -46,6 +46,7 @@ float ceilingShading = 1.5;
 float floorShading = 1.5;
 int gameState = 0;
 int RENDER_DISTANCE = 8;
+unsigned int master_sound_volume = 100;
 float menuSpriteScaleX = 1.25, menuSpriteScaleY = 1;
 
 // sets default screen resolution
@@ -219,7 +220,7 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
                 if (kb::isKeyPressed(kb::L))
                 {
                     std::cout << "Enter level ID to load \n";
-                    std::cin >> currentLevel.ID;
+                    std::cin >> currentLevel.ID_NextLevel;
 
                     levelChanged = true;
                 }
@@ -246,7 +247,7 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
             {
                 if (currentLevel.ID == 0 && (int)player.position.x == 2 && (int)player.position.y == 1)
                 {
-                    currentLevel.ID = 6;
+                    currentLevel.ID_NextLevel = 6;
                     PlaySFX(0, soundEffect);
 
                     levelChanged = true;
@@ -255,7 +256,7 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
                 if (currentLevel.ID == 0 && (((int)player.position.x == 1 && (int)player.position.y == 99)
                     || ((int)player.position.x == 126 && (int)player.position.y == 17)))
                 {
-                    currentLevel.ID = 1;
+                    currentLevel.ID_NextLevel = 1;
                     //playSFX(1, soundEffect);
                     levelChanged = true;
                 }
@@ -277,13 +278,13 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
 
                 if (currentLevel.ID == 1 && (int)player.position.x == 1 && (int)player.position.y == 126)
                 {
-                    currentLevel.ID = 2;
+                    currentLevel.ID_NextLevel = 2;
                     PlaySFX(0, soundEffect);
 
                     levelChanged = true;
                 }
                 
-                if (currentLevel.ID == 2 && (int)player.position.x == 34 && (int)player.position.y == 247 && elevatorCalled == false)
+                if (currentLevel.ID == 2 && (int)player.position.x == 33 && (int)player.position.y == 247 && elevatorCalled == false)
                 {
                     PlaySFX(2, soundEffect);
                     globalClock.restart();
@@ -300,7 +301,7 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
                     coordinatesRecentlyChanged = true;
                 }
 
-                if (currentLevel.ID == 2 && (int)player.position.x == 124 && (int)player.position.y == 177 && elevatorCalled == false)
+                if (currentLevel.ID == 2 && (int)player.position.x == 124 && (int)player.position.y == 177)
                 {
                     PlaySFX(0, soundEffect);
                     currentLevel.ID_NextLevel = 3;
@@ -372,6 +373,35 @@ float square_root(float x)
     return x;
 }
 
+void get_textures(int &wallTextureNum, char tile)
+{
+    switch (currentLevel.ID)
+    {
+    case 0:
+        wallTextureNum = (int)level0_wallTypes.find(tile)->second;
+        break;
+    case 1:
+        wallTextureNum = (int)level1_wallTypes.find(tile)->second;
+        break;
+    case 2:
+        wallTextureNum = (int)level2_wallTypes.find(tile)->second;
+        break;
+    case 3:
+        wallTextureNum = (int)level3_wallTypes.find(tile)->second;
+        break;
+    case 4:
+        wallTextureNum = (int)level4_wallTypes.find(tile)->second;
+        break;
+    case 5:
+        wallTextureNum = (int)wallTypes.find(tile)->second;
+        break;
+    case 6:
+        wallTextureNum = (int)level0_wallTypes.find(tile)->second;
+        break;
+    default:
+        break;
+    }
+}
 
 void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArray& lines)
 {
@@ -437,13 +467,10 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
 
             currentLevel.color = ((mapPos.x % 2 == 0 && mapPos.y % 2 == 0) || (mapPos.x % 2 == 1 && mapPos.y % 2 == 1)) ? currentLevel.color1 : currentLevel.color2;
 
-            if (tile == ',')
-                currentLevel.color = sf::Color(255, 255, 255);
-
             /*if (tile == ',')
             {
-                currentLevel.color = sf::Color(140, 140, 140);
-                currentLevel.floorColor = sf::Color(140, 140, 140);
+                currentLevel.color = sf::Color(255, 255, 255);
+                currentLevel.floorColor = sf::Color(255, 255, 255);
             }
             else
                 currentLevel.floorColor = currentLevel.color1;*/
@@ -469,8 +496,7 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
             if (perpWallDist > RENDER_DISTANCE)
                 break;
 
-
-            wallTextureNum = (int)level0_wallTypes.find(tile)->second;
+            get_textures(wallTextureNum, tile);
 
             sf::Vector2i ceilingTextureCoords(
                 wallTextureNum * texture_wall_size % texture_size,
@@ -484,13 +510,31 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
 
             float ceilingTextureX = (wall_x - floor(wall_x)) * texture_wall_size;
 
+            tile = GetTile(mapPos.x, mapPos.y, currentLevel.ID);
+            heightTile = GetHeight(mapPos.x, mapPos.y, currentLevel.ID);
+
             // add floor
 
            // lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel), floorColor, sf::Vector2f(385, 129)));
-            lines.append(sf::Vertex(
-                sf::Vector2f((float)x, (float)groundPixel),
-                currentLevel.floorColor,
-                sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
+
+            if (tile == 'r')
+            {
+                //ceilingPixel = int(-heightTile * wallHeight * (1.0 - cameraHeight) + screenHeight * 0.5);
+
+                lines.append(sf::Vertex(
+                    sf::Vector2f((float)x, (float)groundPixel * 1.1),
+                    sf::Color::Transparent,
+                    sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
+            }
+            else
+            {
+                lines.append(sf::Vertex(
+                    sf::Vector2f((float)x, (float)groundPixel),
+                    currentLevel.floorColor,
+                    sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
+            }
+
+            
 
             groundPixel = int(wallHeight * cameraHeight + screenHeight * 0.5);
 
@@ -513,7 +557,7 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
                 //ceilingPixel = int(-heightTile * wallHeight * (1.0 - cameraHeight) + screenHeight * 0.5);
 
                 
-                lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel * 1.5), color_c, sf::Vector2f(385, 129))); // also adds floor reflexion
+                lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel * 1.5), color_c, sf::Vector2f(385, 129))); // also adds floor reflection
             }
             else {
                 lines.append(sf::Vertex(
@@ -527,8 +571,6 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
                 currentLevel.color,
                 sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
 
-            tile = GetTile(mapPos.x, mapPos.y, currentLevel.ID);
-            heightTile = GetHeight(mapPos.x, mapPos.y, currentLevel.ID);
             ceilingPixel = int((-wallHeight * heightTile) * (1.0 - cameraHeight) + screenHeight * 0.5);
 
             //lines.append(sf::Vertex(sf::Vector2f((float)x, (float)ceilingPixel), color_c, sf::Vector2f(0, 0)));
@@ -551,64 +593,7 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
             int drawEnd = groundPixel;
 
             // get position of the wall texture in the full texture
-            switch (currentLevel.ID)
-            {
-            case 0:
-                wallTextureNum = (int)level0_wallTypes.find(tile)->second;
-                break;
-            case 1:
-                wallTextureNum = (int)level0_wallTypes.find(tile)->second;
-                if (tile == '$')
-                {
-                    wallShading = 1;
-                    lightSourcePosX = mapPos.x;
-                    lightSourcePosY = mapPos.y;
-                }
-                else
-                {
-                    wallShading = 1.5;
-                         distance = (mapPos.x + mapPos.y) - (lightSourcePosX + lightSourcePosY);
-
-                        if (distance >= 1 && distance <= 2)
-                        {
-                            wallShading = 1.2;
-                            shading = 1.2;
-                        }
-                        else if (distance > 2 && distance <= 3)
-                        {
-                            wallShading = 1.3;
-                            shading = 1.3;
-                        }
-                        else if (distance > 3 && distance <= 4)
-                        {
-                            wallShading = 1.4;
-                            shading = 1.4;
-                        }
-                        else
-                        {
-                            wallShading = 1.5;
-                            shading = 1.5;
-                        }
-                }
-                break;
-            case 2:
-                wallTextureNum = (int)level2_wallTypes.find(tile)->second;
-                break;
-            case 3:
-                wallTextureNum = (int)level3_wallTypes.find(tile)->second;
-                break;
-            case 4:
-                wallTextureNum = (int)level4_wallTypes.find(tile)->second;
-                break;
-            case 5:
-                wallTextureNum = (int)wallTypes.find(tile)->second;
-                break;
-            case 6:
-                wallTextureNum = (int)level0_wallTypes.find(tile)->second;
-                break;
-            default:
-                break;
-            }
+            get_textures(wallTextureNum, tile);
 
             sf::Vector2i texture_coords(
                 wallTextureNum * texture_wall_size % texture_size,
@@ -800,11 +785,11 @@ int main()
                 int volume;
 
                 if(distanceX < 5 || distanceY < 5)
-                    volume = (distanceX + distanceY) * (- 1);
+                    volume = ((distanceX + distanceY) * (- 1)) * master_sound_volume;
                 else if (distanceX + distanceY > 100)
-                    volume = 100;
+                    volume = master_sound_volume;
                 else
-                    volume = distanceX + distanceY;
+                    volume = (distanceX + distanceY) * master_sound_volume;
 
                 currentLevel.machineSFX.setVolume(100 - volume);
             }

@@ -96,6 +96,9 @@ void CurrentLevel::loadHeightMapFile(const char* levelHeightMapAdress)
 
 void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
 {
+    footsteps.setVolume(master_sound_volume);
+    levelEntranceSound.setVolume(master_sound_volume);
+
     if (!entitySoundBuffer.loadFromFile("Data/Audio/EntitySFX.mp3"))
     {
         printf("Cannot open sound file EntitySFX.mp3!\n");
@@ -130,7 +133,7 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         state.texture = &Textures;
 
         AmbientSFX.setBuffer(soundBuffer);
-        AmbientSFX.setVolume(50);
+        AmbientSFX.setVolume(0.5 * master_sound_volume);
         AmbientSFX.play();
         AmbientSFX.setLoop(true);
 
@@ -164,7 +167,7 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
 
         if (!Textures.loadFromFile(level_1.textureAdress))
         {
-            printf("Cannot open sound file %c\n", level_1.textureAdress);
+            printf("Cannot open file %c\n", level_1.textureAdress);
         }
 
         if (!soundBuffer.loadFromFile(level_1.ambientSFXAdress))
@@ -181,7 +184,7 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         state.texture = &Textures;
 
         AmbientSFX.setBuffer(soundBuffer);
-        AmbientSFX.setVolume(10);
+        AmbientSFX.setVolume(0.1 * master_sound_volume);
         AmbientSFX.play();
         AmbientSFX.setLoop(true);
 
@@ -232,17 +235,17 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         machineVolume = level_2.machineSFXVolume;
 
         AmbientSFX.setBuffer(soundBuffer);
-        AmbientSFX.setVolume(10);
+        AmbientSFX.setVolume(0.1 * master_sound_volume);
         AmbientSFX.play();
         AmbientSFX.setLoop(true);
 
         AmbientSFX2.setBuffer(soundBuffer2);
-        AmbientSFX2.setVolume(20);
+        AmbientSFX2.setVolume(0.2 * master_sound_volume);
         //AmbientSFX2.play();
         AmbientSFX2.setLoop(true);
 
         machineSFX.setBuffer(machineSFXBuffer);
-        machineSFX.setVolume(100);
+        machineSFX.setVolume(master_sound_volume);
         machineSFX.play();
         machineSFX.setLoop(true);
 
@@ -344,7 +347,7 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         state.texture = &Textures;
 
         AmbientSFX.setBuffer(soundBuffer);
-        AmbientSFX.setVolume(10);
+        AmbientSFX.setVolume(0.1 * master_sound_volume);
         AmbientSFX.play();
         AmbientSFX.setLoop(true);
 
@@ -426,6 +429,7 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         levelEntranceSound.play();
 
         AmbientSFX.setBuffer(soundBuffer);
+        AmbientSFX.setVolume(0.5 * master_sound_volume);
         AmbientSFX.play();
         AmbientSFX.setLoop(true);
 
