@@ -283,7 +283,7 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
 
                     levelChanged = true;
                 }
-                
+
                 if (currentLevel.ID == 2 && (int)player.position.x == 33 && (int)player.position.y == 247 && elevatorCalled == false)
                 {
                     PlaySFX(2, soundEffect);
@@ -309,6 +309,19 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
                     levelChanged = true;
                 }
 
+                if (currentLevel.ID == 5 && (int)player.position.x == 1 && (int)player.position.y == 2)
+                {
+                    PlaySFX(0, soundEffect);
+                    player.setPlayerNewPos(5, 2.5);
+                    coordinatesRecentlyChanged = true;
+                }
+
+                if (currentLevel.ID == 5 && (int)player.position.x == 4 && (int)player.position.y == 2)
+                {
+                    PlaySFX(0, soundEffect);
+                    player.setPlayerNewPos(1.5, 3);
+                    coordinatesRecentlyChanged = true;
+                }
             }
 
             if (moveForward != 0.0f)
@@ -393,7 +406,7 @@ void get_textures(int &wallTextureNum, char tile)
         wallTextureNum = (int)level4_wallTypes.find(tile)->second;
         break;
     case 5:
-        wallTextureNum = (int)wallTypes.find(tile)->second;
+        wallTextureNum = (int)level5_wallTypes.find(tile)->second;
         break;
     case 6:
         wallTextureNum = (int)level0_wallTypes.find(tile)->second;
@@ -401,6 +414,12 @@ void get_textures(int &wallTextureNum, char tile)
     default:
         break;
     }
+}
+
+char get_ceiling_tile(int x, int y)
+{
+
+    return currentLevel.ceilingMap[y * currentLevel.MAP_WIDTH + x];
 }
 
 void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArray& lines)
@@ -498,10 +517,10 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
 
             get_textures(wallTextureNum, tile);
 
-            sf::Vector2i ceilingTextureCoords(
+            sf::Vector2i floorTextureCoords(
                 wallTextureNum * texture_wall_size % texture_size,
                 wallTextureNum * texture_wall_size / texture_size * texture_wall_size
-            );
+            );        
 
             wallHeight = (screenHeight / perpWallDist);
 
@@ -524,17 +543,15 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
                 lines.append(sf::Vertex(
                     sf::Vector2f((float)x, (float)groundPixel * 1.1),
                     sf::Color::Transparent,
-                    sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
+                    sf::Vector2f((float)(floorTextureCoords.x + ceilingTextureX), (float)floorTextureCoords.y)));
             }
             else
             {
                 lines.append(sf::Vertex(
                     sf::Vector2f((float)x, (float)groundPixel),
                     currentLevel.floorColor,
-                    sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
+                    sf::Vector2f((float)(floorTextureCoords.x + ceilingTextureX), (float)floorTextureCoords.y)));
             }
-
-            
 
             groundPixel = int(wallHeight * cameraHeight + screenHeight * 0.5);
 
@@ -542,7 +559,7 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
             lines.append(sf::Vertex(
                 sf::Vector2f((float)x, (float)groundPixel),
                 currentLevel.floorColor,
-                sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)(ceilingTextureCoords.y + texture_wall_size - 1))));
+                sf::Vector2f((float)(floorTextureCoords.x + ceilingTextureX), (float)(floorTextureCoords.y + texture_wall_size - 1))));
 
             //lines.append(sf::Vertex(sf::Vector2f((float)x, (float)groundPixel), floorColor, sf::Vector2f(385, 129)));
 
@@ -565,6 +582,20 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
                     currentLevel.color,
                     sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
             }*/
+
+            if (currentLevel.ID == 5)
+            {
+                get_textures(wallTextureNum, get_ceiling_tile(mapPos.x, mapPos.y));
+            }
+            else
+            {
+                get_textures(wallTextureNum, tile);
+            }
+
+            sf::Vector2i ceilingTextureCoords(
+                wallTextureNum * texture_wall_size % texture_size,
+                wallTextureNum * texture_wall_size / texture_size * texture_wall_size
+            );
 
             lines.append(sf::Vertex(
                 sf::Vector2f((float)x, (float)ceilingPixel),

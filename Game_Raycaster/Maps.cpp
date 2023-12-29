@@ -10,11 +10,13 @@ struct Level_3 level_3;
 struct Level_4 level_4;
 struct Level_Run level_Run;
 struct Level_5 level_5;
+struct Level_6 level_6;
 struct Level_0_0_1 level_0_0_1;
 
 extern float wallShading;
 extern float ceilingShading;
 extern float floorShading;
+extern int RENDER_DISTANCE;
 
 extern Player player;
 extern bool noSaveFile;
@@ -92,6 +94,35 @@ void CurrentLevel::loadHeightMapFile(const char* levelHeightMapAdress)
     }
 
     heightMapFile.close();
+}
+
+void CurrentLevel::loadCeilingMapFile(const char* levelCeilingMapAdress)
+{
+    std::ifstream ceilingMapFile(levelCeilingMapAdress);
+
+    ceilingMap = (char*)malloc((MAP_HEIGHT * MAP_WIDTH) * sizeof(char));
+
+    if (ceilingMap == nullptr)
+    {
+        printf("Could not allocate memory for pointer level_0.map!");
+        return;
+    }
+
+    if (!ceilingMapFile.is_open())
+    {
+        printf("Could not open data file %c levelCeilingMapAdress or file doesn't exist; Exiting program", levelCeilingMapAdress);
+        free(map);
+        return;
+    }
+
+    for (int i = 0; i <= MAP_HEIGHT * MAP_WIDTH; i++)
+    {
+        ceilingMapFile >> ceilingMap[i];
+        if (ceilingMapFile.eof())
+            break;
+    }
+
+    ceilingMapFile.close();
 }
 
 void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
@@ -366,6 +397,8 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         MAP_WIDTH = level_5.MAP_WIDTH;
 
         loadMapFile(level_5.mapFileAdress);
+        loadCeilingMapFile(level_5.ceilingTilesMapFileAdress);
+
         if (!Textures.loadFromFile(level_5.textureAdress))
         {
             printf("Cannot open sound file %c\n", level_5.textureAdress);
@@ -384,16 +417,60 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         maxWallHeight = level_5.maxWallHeight;
 
         state.texture = &Textures;
+        wallShading = 1.1;
 
-        color1 = sf::Color(154, 153, 149);
-        color2 = sf::Color(154, 153, 149);
+        color1 = sf::Color(255, 255, 255);
+        color2 = sf::Color(255, 255, 255);
+        floorColor = sf::Color(255, 255, 255);
+        floorColor.r /= 1.2;
+        floorColor.g /= 1.2;
+        floorColor.b /= 1.2;
 
-        floorColor = sf::Color(154, 153, 149);
-        floorColor.r /= floorShading;
-        floorColor.g /= floorShading;
-        floorColor.b /= floorShading;
+        player.setPlayerNewPos(1.5, 1.5);
         break;
     case 6:
+        MAP_HEIGHT = level_6.MAP_HEIGHT;
+        MAP_WIDTH = level_6.MAP_WIDTH;
+
+        loadMapFile(level_6.mapFileAdress);  
+
+        if (!Textures.loadFromFile(level_6.textureAdress))
+        {
+            printf("Cannot open sound file %c\n", level_6.textureAdress);
+        }
+
+        if (!soundBuffer.loadFromFile(level_6.ambientSFXAdress))
+        {
+            printf("Cannot open sound file %c\n", level_6.ambientSFXAdress);
+        }
+
+        if (!footstepsBuffer.loadFromFile(level_6.footstepsSFXAdress))
+            printf("Cannot open sound file %c\n", level_6.footstepsSFXAdress);
+
+        footsteps.setBuffer(footstepsBuffer);
+
+        maxWallHeight = level_6.maxWallHeight;
+
+        state.texture = &Textures;
+        wallShading = 10;
+
+        color1 = sf::Color(255, 255, 255);
+        color1.r /= 10;
+        color1.g /= 10;
+        color1.b /= 10;
+        color2 = sf::Color(255, 255, 255);
+        color2.r /= 10;
+        color2.g /= 10;
+        color2.b /= 10;
+        floorColor = sf::Color(255, 255, 255);
+        floorColor.r /= 10;
+        floorColor.g /= 10;
+        floorColor.b /= 10;
+        RENDER_DISTANCE = 3;
+
+        player.setPlayerNewPos(1.5, 1.5);
+        break;
+    case 7:
         MAP_HEIGHT = level_0_0_1.MAP_HEIGHT;
         MAP_WIDTH = level_0_0_1.MAP_WIDTH;
 

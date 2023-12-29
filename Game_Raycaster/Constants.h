@@ -2,7 +2,7 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
-#define VERSION_ID "Version 0.8.0"
+#define VERSION_ID "Version 0.9.0"
 
 #define PI 3.1459
 #define GRAVITY_ACCELERATION 9.81

@@ -64,47 +64,52 @@ enum class TexturesLevel4 {
     OfficeWallWithRadiator,
 };
 
+enum class TexturesLevel5 {
+    HotelWall,
+    HotelWallWithDoor,
+    HotelWallElevator,
+    HotelWallPainting,
+    ElevatorInsideFront,
+    ElevatorInsideBack,
+    ElevatorInsideSides,
+    ElevatorInsideFloor,
+    HotelFloor,
+    HotelCeiling,
+    RoomWall,
+    RoomFloor,
+    RoomCeiling,
+    RoomWallWithDoor,
+    HotelWall2Painting,
+    HotelWall2,
+};
+
+enum class TexturesLevel6 {
+    HotelWall,
+    HotelWallWithDoor,
+    HotelWallElevator,
+    HotelWallPainting,
+    ElevatorInsideFront,
+    ElevatorInsideBack,
+    ElevatorInsideSides,
+    ElevatorInsideFloor,
+    HotelFloor,
+    HotelCeiling,
+    RoomWall,
+    RoomFloor,
+    RoomCeiling,
+    RoomWallWithDoor,
+    HotelWall2Painting,
+    HotelWall2,
+};
+
+
 enum class TexturesLeveRun {
     RedWallWithDoor,
     RedCeilingFloor,
     RedWall,
 };
 
-enum class Textures {
-    YellowWall,
-    ConcreteTexture1,
-    ConcreteTexture2,
-    YellowCeiling,
-    Ice,
-    DarkStoneBricks,
-    Wood,
-    Concrete,
-    Truck,
-    RedBricks,
-    GarageDoor,
-    CrackedConcrete,
-    HotelWall,
-    HotelWallDoor,
-    HotelElevatorDoor,
-    HotelWallPainting1,
-};
-
 // valid wall types and their texture for the world map
-const std::unordered_map<char, Textures> wallTypes
-{
-    {'M', Textures::DarkStoneBricks},
-    {'=', Textures::Wood},
-    {'~', Textures::Ice},
-    {'^', Textures::Concrete},
-    {'&', Textures::CrackedConcrete},
-    {'T', Textures::Truck },
-    {'G', Textures::GarageDoor },
-    {'H', Textures::HotelWall },
-    {'D', Textures::HotelWallDoor },
-    {'E', Textures::HotelElevatorDoor },
-    {'P', Textures::HotelWallPainting1 },
-    {'S', Textures::HotelWallPainting1 },
-};
 
 const std::unordered_map<char, TexturesLevel0> level0_wallTypes
 {
@@ -170,6 +175,26 @@ const std::unordered_map<char, TexturesLevel4> level4_wallTypes
 
 };
 
+const std::unordered_map<char, TexturesLevel5> level5_wallTypes
+{
+    {'#', TexturesLevel5::HotelWall},
+    {'@', TexturesLevel5::HotelWallWithDoor},
+    {'$', TexturesLevel5::HotelWallElevator},
+    {'%', TexturesLevel5::HotelWallPainting},
+    {'^', TexturesLevel5::ElevatorInsideFront},
+    {'&', TexturesLevel5::ElevatorInsideBack},
+    {'!', TexturesLevel5::ElevatorInsideSides},
+    {'*', TexturesLevel5::RoomWall},
+    {']', TexturesLevel5::RoomWallWithDoor},
+    {'W', TexturesLevel5::HotelWall2},
+    {'P', TexturesLevel5::HotelWall2Painting},
+    {',', TexturesLevel5::RoomFloor},
+    {':', TexturesLevel5::RoomCeiling},
+    {'.', TexturesLevel5::HotelFloor},
+    {';', TexturesLevel5::RoomCeiling},
+    {'_', TexturesLevel5::ElevatorInsideFloor},
+
+};
 
 const std::unordered_map<char, TexturesLeveRun> levelRun_wallTypes
 {

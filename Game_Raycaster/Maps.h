@@ -37,6 +37,7 @@ public:
     int MAP_HEIGHT;
     int maxWallHeight;
     char* map;
+    char* ceilingMap;
     int* heightMap;
     int machineVolume;
 
@@ -67,6 +68,7 @@ public:
     void loadMapFile(const char* levelAdress);
     void loadLevel(sf::RenderWindow& window, sf::RenderStates& state);
     void loadHeightMapFile(const char* levelHeightMapAdress);
+    void loadCeilingMapFile(const char* levelCeilingMapAdress);
     ~CurrentLevel();
 
 };
@@ -174,10 +176,28 @@ struct Level_5
     // map size
     const short MAP_WIDTH = 64;
     const short MAP_HEIGHT = 64;
-    const short maxWallHeight = 1;
+    const short maxWallHeight = 2;
 
     const char* mapFileAdress = "Data/Maps/Level_5.map";
-    const char* textureAdress = "Data/Textures/textures.png";
+    const char* ceilingTilesMapFileAdress = "Data/Maps/Level_5_ceiling_Tiles.map";
+    const char* textureAdress = "Data/Textures/level_5_textures.png";
+    const char* ambientSFXAdress = "Data/Audio/Level0LightAmbience.mp3";
+    const char* footstepsSFXAdress = "Data/Audio/CarpetFootsteps.mp3";
+    const char* entitySFXAdress = "Data/Audio/EntitySFX.mp3";
+    const char* levelEntranceSFXAdress = "Data/Audio/FallingSFX.mp3";
+
+};
+
+struct Level_6
+{
+    // map size
+    const short MAP_WIDTH = 64;
+    const short MAP_HEIGHT = 64;
+    const short maxWallHeight = 2;
+
+    const char* mapFileAdress = "Data/Maps/Level_6.map";
+    //const char* ceilingTilesMapFileAdress = "Data/Maps/Level_5_ceiling_Tiles.map";
+    const char* textureAdress = "Data/Textures/level_6_textures.png";
     const char* ambientSFXAdress = "Data/Audio/Level0LightAmbience.mp3";
     const char* footstepsSFXAdress = "Data/Audio/ConcreteFootsteps.mp3";
     const char* entitySFXAdress = "Data/Audio/EntitySFX.mp3";
