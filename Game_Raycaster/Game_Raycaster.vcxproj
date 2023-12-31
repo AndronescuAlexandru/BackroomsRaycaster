@@ -137,6 +137,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="FileOperations.cpp" />
+    <ClCompile Include="KeyboardInputs.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Maps.cpp" />
     <ClCompile Include="Menus.cpp" />
@@ -146,6 +147,7 @@
   <ItemGroup>
     <ClInclude Include="Constants.h" />
     <ClInclude Include="FileOperations.h" />
+    <ClInclude Include="KeyboardInputs.h" />
     <ClInclude Include="Maps.h" />
     <ClInclude Include="Menus.h" />
     <ClInclude Include="Player.h" />

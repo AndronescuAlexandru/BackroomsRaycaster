@@ -1,10 +1,12 @@
-﻿// Version : 0.7.1
+﻿// Version : 0.9.0
 
 #include <iostream>
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
+#include <random>
 #include <string.h>
+#include <chrono>
 #include <algorithm>
 #include <SFML/System/Time.hpp>
 #include <Windows.h>
@@ -32,6 +34,7 @@ extern struct Level_0_0_1 level_0_0_1;
 sf::SoundBuffer soundEffectsBuffer;
 sf::Sound soundEffect;
 sf::Clock globalClock;
+sf::Clock eventsGlobalClock;
 
 bool keyboardPressed = false;
 bool levelChanged = false;
@@ -40,12 +43,15 @@ bool footstepsPlaying = false;
 bool debugMode = true;
 bool noSaveFile;
 bool hasFocus = true;
+bool events = false;
 
 float wallShading = 1.5;
 float ceilingShading = 1.5;
 float floorShading = 1.5;
 int gameState = 0;
 int RENDER_DISTANCE = 8;
+int RENDER_DISTANCE_COPY = RENDER_DISTANCE; // the value of this copy of the variable RENDER_DISTANCE is used to revert back to the saved render distance settings
+                                           // after an event that changed the lighting occured
 unsigned int master_sound_volume = 100;
 float menuSpriteScaleX = 1.25, menuSpriteScaleY = 1;
 
@@ -145,6 +151,14 @@ void PlaySFX(short type, sf::Sound& soundEffect)
         soundEffect.setBuffer(soundEffectsBuffer);
         soundEffect.play();
     }
+    case 4:
+    {
+        if (!soundEffectsBuffer.loadFromFile("Data/Audio/ElevatorDoorClosing.mp3"))
+            std::cout << "Could not open sound file NoclipSFX1.mp3!\n";
+
+        soundEffect.setBuffer(soundEffectsBuffer);
+        soundEffect.play();
+    }
     default:
         break;
     }
@@ -224,7 +238,19 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
 
                     levelChanged = true;
                 }
+
+                if (kb::isKeyPressed(kb::E))
+                    events = true;
+
+                if (kb::isKeyPressed(kb::R))
+                    events = false;
             }
+
+            if (kb::isKeyPressed(kb::Equal))
+                debugMode = true;
+
+            if(kb::isKeyPressed(kb::Hyphen))
+                debugMode = false;
 
             if (kb::isKeyPressed(kb::LShift))
             {
@@ -409,6 +435,9 @@ void get_textures(int &wallTextureNum, char tile)
         wallTextureNum = (int)level5_wallTypes.find(tile)->second;
         break;
     case 6:
+        wallTextureNum = (int)level6_wallTypes.find(tile)->second;
+        break;
+    case 7:
         wallTextureNum = (int)level0_wallTypes.find(tile)->second;
         break;
     default:
@@ -592,6 +621,7 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
                 get_textures(wallTextureNum, tile);
             }
 
+
             sf::Vector2i ceilingTextureCoords(
                 wallTextureNum * texture_wall_size % texture_size,
                 wallTextureNum * texture_wall_size / texture_size * texture_wall_size
@@ -600,7 +630,7 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
             lines.append(sf::Vertex(
                 sf::Vector2f((float)x, (float)ceilingPixel),
                 currentLevel.color,
-                sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)ceilingTextureCoords.y)));
+                sf::Vector2f((float)(floorTextureCoords.x + ceilingTextureX), (float)floorTextureCoords.y)));
 
             ceilingPixel = int((-wallHeight * heightTile) * (1.0 - cameraHeight) + screenHeight * 0.5);
 
@@ -609,7 +639,7 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
             lines.append(sf::Vertex(
                 sf::Vector2f((float)x, (float)ceilingPixel),
                 currentLevel.color,
-                sf::Vector2f((float)(ceilingTextureCoords.x + ceilingTextureX), (float)(ceilingTextureCoords.y + texture_wall_size - 1))));
+                sf::Vector2f((float)(floorTextureCoords.x + ceilingTextureX), (float)(floorTextureCoords.y + texture_wall_size - 1))));
 
             // change color and find tile type
 
@@ -705,6 +735,47 @@ void SetBlackScreen(sf::RenderWindow& window, sf::Time seconds)
     }
 }
 
+void RandomEvent()
+{
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    srand(seed);
+
+    unsigned int randomNumber;
+    unsigned int randomEntitySFX;
+
+    if (eventsGlobalClock.getElapsedTime().asSeconds() >= 30)
+    {
+        randomNumber = rand() % 100 + 1;
+        randomEntitySFX = rand() % 100 + 1;
+
+        if (randomNumber >= 90 && RENDER_DISTANCE != 4)
+        {
+            RENDER_DISTANCE = 4;
+            wallShading = 10;
+            eventsGlobalClock.restart();
+        }
+        else if (eventsGlobalClock.getElapsedTime().asSeconds() >= 30)
+        {
+            RENDER_DISTANCE = RENDER_DISTANCE_COPY;
+            wallShading = currentLevel.defaultWallShading;
+            floorShading = wallShading;
+            ceilingShading = wallShading;
+            eventsGlobalClock.restart();
+        }
+
+        if (randomEntitySFX >= 70 && RENDER_DISTANCE == 4)
+        {
+            currentLevel.EntitySFX.play();
+            eventsGlobalClock.restart();
+        }
+        else if(randomEntitySFX >= 95)
+        {
+            currentLevel.EntitySFX.play();
+            eventsGlobalClock.restart();
+        }
+    }
+}
+
 int main()
 {
     sf::Font font;
@@ -734,6 +805,8 @@ int main()
     sf::View view = window.getDefaultView();
 
     UIConstruct(font);
+
+    RENDER_DISTANCE_COPY = RENDER_DISTANCE;
 
     while (window.isOpen())
     {
@@ -796,6 +869,8 @@ int main()
                     GoToNextLevel(window, state);
                 }
             }
+
+            RandomEvent();
 
             KeyboardInput(hasFocus, player, size, dt);
             //printf("X: %f Y: %f ", player.position.x, player.position.y);

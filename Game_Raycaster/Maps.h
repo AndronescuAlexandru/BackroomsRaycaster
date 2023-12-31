@@ -40,6 +40,7 @@ public:
     char* ceilingMap;
     int* heightMap;
     int machineVolume;
+    int defaultWallShading;
 
     // colors used for floor and ceiling tiles in the current level
     sf::Color color;

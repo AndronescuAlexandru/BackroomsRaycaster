@@ -84,22 +84,8 @@ enum class TexturesLevel5 {
 };
 
 enum class TexturesLevel6 {
-    HotelWall,
-    HotelWallWithDoor,
-    HotelWallElevator,
-    HotelWallPainting,
-    ElevatorInsideFront,
-    ElevatorInsideBack,
-    ElevatorInsideSides,
-    ElevatorInsideFloor,
-    HotelFloor,
-    HotelCeiling,
-    RoomWall,
-    RoomFloor,
-    RoomCeiling,
-    RoomWallWithDoor,
-    HotelWall2Painting,
-    HotelWall2,
+    ConcreteWall,
+    ConcreteFloor
 };
 
 
@@ -194,6 +180,12 @@ const std::unordered_map<char, TexturesLevel5> level5_wallTypes
     {';', TexturesLevel5::RoomCeiling},
     {'_', TexturesLevel5::ElevatorInsideFloor},
 
+};
+
+const std::unordered_map<char, TexturesLevel6> level6_wallTypes
+{
+    {'#', TexturesLevel6::ConcreteWall},
+    {'.', TexturesLevel6::ConcreteFloor},
 };
 
 const std::unordered_map<char, TexturesLeveRun> levelRun_wallTypes

@@ -144,7 +144,7 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         loadMapFile(level_0.mapFileAdress);
         if (!Textures.loadFromFile(level_0.textureAdress))
         {
-            printf("Cannot open sound file %c\n", level_0.textureAdress);
+            printf("Cannot open file %c\n", level_0.textureAdress);
         }
 
         if (!soundBuffer.loadFromFile(level_0.ambientSFXAdress))
@@ -168,6 +168,7 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         AmbientSFX.play();
         AmbientSFX.setLoop(true);
 
+        defaultWallShading = 1.1;
         wallShading = 1.1;
 
         color1 = sf::Color(182, 179, 102);
@@ -222,6 +223,7 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         wallShading = 1.5;
         ceilingShading = 1.5;
         floorShading = 1.5;
+        defaultWallShading = 1.5;
 
         color1 = sf::Color(100, 100, 100);
         color2 = sf::Color(100, 100, 100); //sf::Color(129, 124, 121);
@@ -288,6 +290,7 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         wallShading = 2.5;
         ceilingShading = 2.5;
         floorShading = 2.5;
+        defaultWallShading = 2.5;
 
         color1 = sf::Color(154, 153, 149);
         color2 = sf::Color(154, 153, 149); //sf::Color(129, 124, 121);
@@ -330,6 +333,7 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         state.texture = &Textures;
 
         wallShading = 1.2;
+        defaultWallShading = 1.2;
         ceilingShading = 1;
         floorShading = 1;
 
@@ -383,6 +387,7 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         AmbientSFX.setLoop(true);
 
         wallShading = 1.1;
+        defaultWallShading = 1.1;
 
         color1 = sf::Color(175, 175, 175);
         color2 = sf::Color(255, 255, 255);
@@ -418,6 +423,7 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
 
         state.texture = &Textures;
         wallShading = 1.1;
+        defaultWallShading = 1.1;
 
         color1 = sf::Color(255, 255, 255);
         color2 = sf::Color(255, 255, 255);
@@ -453,6 +459,7 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
 
         state.texture = &Textures;
         wallShading = 10;
+        defaultWallShading = 10;
 
         color1 = sf::Color(255, 255, 255);
         color1.r /= 10;
@@ -511,6 +518,7 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         AmbientSFX.setLoop(true);
 
         wallShading = 1.1;
+        defaultWallShading = 1.1;
 
         color1 = sf::Color(182, 179, 102);
         color2 = sf::Color(255, 255, 255);
