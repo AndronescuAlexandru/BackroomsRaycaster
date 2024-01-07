@@ -125,7 +125,7 @@ void CurrentLevel::loadCeilingMapFile(const char* levelCeilingMapAdress)
     ceilingMapFile.close();
 }
 
-void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
+void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state, bool defaultPlayerStartingPos)
 {
     footsteps.setVolume(master_sound_volume);
     levelEntranceSound.setVolume(master_sound_volume);
@@ -176,8 +176,8 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
 
         floorColor = sf::Color(178, 163, 106);
 
-        if(noSaveFile)
-            player.setPlayerNewPos(2, 2);
+        if(noSaveFile == true || defaultPlayerStartingPos == true)
+            player.setPlayerNewPos(66, 38);
 
         break;
     }
@@ -303,7 +303,8 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         floorColor.g /= floorShading;
         floorColor.b /= floorShading;
 
-        player.setPlayerNewPos(1.5, 1.5);
+        if(defaultPlayerStartingPos)
+            player.setPlayerNewPos(1.5, 1.5);
 
         break;
     case 3:
@@ -341,7 +342,8 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         color2 = sf::Color(200, 200, 200);
         floorColor = sf::Color(200, 200, 200);
 
-        player.setPlayerNewPos(30.0, 40.0);
+        if(defaultPlayerStartingPos)
+            player.setPlayerNewPos(30.0, 40.0);
 
         break;
     case 4:
@@ -394,7 +396,8 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
 
         floorColor = sf::Color(175, 175, 175);
 
-        player.setPlayerNewPos(1.5, 1.5);
+        if(defaultPlayerStartingPos)
+            player.setPlayerNewPos(1.5, 1.5);
 
         break;
     case 5:
@@ -432,7 +435,9 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         floorColor.g /= 1.2;
         floorColor.b /= 1.2;
 
-        player.setPlayerNewPos(1.5, 1.5);
+        if(defaultPlayerStartingPos)
+            player.setPlayerNewPos(4.5, 31.5);
+
         break;
     case 6:
         MAP_HEIGHT = level_6.MAP_HEIGHT;
@@ -475,7 +480,9 @@ void CurrentLevel::loadLevel(sf::RenderWindow& window, sf::RenderStates& state)
         floorColor.b /= 10;
         RENDER_DISTANCE = 3;
 
-        player.setPlayerNewPos(1.5, 1.5);
+        if(defaultPlayerStartingPos)
+            player.setPlayerNewPos(1.5, 1.5);
+
         break;
     case 7:
         MAP_HEIGHT = level_0_0_1.MAP_HEIGHT;

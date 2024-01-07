@@ -5,6 +5,7 @@
 #include <fstream>
 #include "Constants.h"
 #include "Maps.h"
+#include "FileOperations.h"
 
 extern int RENDER_DISTANCE;
 extern int gameState;

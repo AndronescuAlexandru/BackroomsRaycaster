@@ -67,7 +67,7 @@ public:
 
     CurrentLevel();
     void loadMapFile(const char* levelAdress);
-    void loadLevel(sf::RenderWindow& window, sf::RenderStates& state);
+    void loadLevel(sf::RenderWindow& window, sf::RenderStates& state, bool defaultPlayerStartingPos);
     void loadHeightMapFile(const char* levelHeightMapAdress);
     void loadCeilingMapFile(const char* levelCeilingMapAdress);
     ~CurrentLevel();

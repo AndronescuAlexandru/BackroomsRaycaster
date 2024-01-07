@@ -133,25 +133,27 @@ void MainMenu(sf::RenderWindow &window , sf::RenderStates &state, sf::Font font)
             }
 
             gameState = IN_GAME;
-            currentLevel.loadLevel(window, state);
+            currentLevel.loadLevel(window, state, true);
         }
 
         break;
     case 1:
         if (noSaveFile)
+        {
             loadGameButton.setFillColor(sf::Color(135, 135, 135));
+            loadGameButtonText.setFillColor(sf::Color::White);
+        }
         else
+        {
             loadGameButton.setFillColor(sf::Color::White);
+            loadGameButtonText.setFillColor(sf::Color::Black);
+        }
 
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter) && noSaveFile == false)
         {
-            if (!noSaveFile)
-            {
-                gameState = IN_GAME;
-                currentLevel.loadLevel(window, state);
-            }
-            else
-               printf("No save file found, start a new game");
+            LoadSaveFile();
+            gameState = IN_GAME;
+            currentLevel.loadLevel(window, state, false);
         }
 
         break;
@@ -705,11 +707,11 @@ void PauseMenu(sf::RenderWindow& window, sf::Font font, sf::Event event, sf::Vie
 
             if (kb::isKeyPressed(kb::Enter))
             {
+                sf::sleep(sf::milliseconds(100));
                 currentLevel.AmbientSFX.stop();
                 currentLevel.AmbientSFX2.stop();
                 currentLevel.machineSFX.stop();
                 gameState = MAIN_MENU;
-                sf::sleep(sf::milliseconds(50));
             }
 
             break;

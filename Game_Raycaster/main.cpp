@@ -43,7 +43,7 @@ bool footstepsPlaying = false;
 bool debugMode = true;
 bool noSaveFile;
 bool hasFocus = true;
-bool events = false;
+bool randomEvents = false;
 
 float wallShading = 1.5;
 float ceilingShading = 1.5;
@@ -111,56 +111,82 @@ float deg_to_rad(const float i_degrees)
     return PI * get_degrees(i_degrees) / 180;
 }
 
-void PlaySFX(short type, sf::Sound& soundEffect)
+void PlaySFX(short type, sf::Sound& soundEffect, int volume)
 {
-
-    switch (type)
+    if (volume != -1)
     {
-    case 0:
-    {
-        if (!soundEffectsBuffer.loadFromFile("Data/Audio/MetalDoorOpeningClosing.mp3"))
-            std::cout << "Could not open sound file MetalDoorOpeningClosing.mp3!\n";
+        soundEffect.setVolume(volume);
 
-        soundEffect.setBuffer(soundEffectsBuffer);
-        soundEffect.play();
+        switch (type)
+        {
+        case 0:
+        {
+            if (!soundEffectsBuffer.loadFromFile("Data/Audio/MetalDoorOpeningClosing.mp3"))
+                std::cout << "Could not open sound file MetalDoorOpeningClosing.mp3!\n";
 
-        break;
-    }
-    case 1:
-    {
-        if (!soundEffectsBuffer.loadFromFile("Data/Audio/FallingSFX.mp3"))
-            std::cout << "Could not open sound file NoclipSFX1.mp3!\n";
+            soundEffect.setBuffer(soundEffectsBuffer);
+            soundEffect.play();
 
-        soundEffect.setBuffer(soundEffectsBuffer);
-        soundEffect.play();
-        break;
-    }
-    case 2:
-    {
-        if (!soundEffectsBuffer.loadFromFile("Data/Audio/ElevatorDoorOpening.mp3"))
-            std::cout << "Could not open sound file NoclipSFX1.mp3!\n";
+            break;
+        }
+        case 1:
+        {
+            if (!soundEffectsBuffer.loadFromFile("Data/Audio/FallingSFX.mp3"))
+                std::cout << "Could not open sound file FallingSFX.mp3!\n";
 
-        soundEffect.setBuffer(soundEffectsBuffer);
-        soundEffect.play();
-    }
-    case 3:
-    {
-        if (!soundEffectsBuffer.loadFromFile("Data/Audio/ElevatorDoorClosing.mp3"))
-            std::cout << "Could not open sound file NoclipSFX1.mp3!\n";
+            soundEffect.setBuffer(soundEffectsBuffer);
+            soundEffect.play();
+            break;
+        }
+        case 2:
+        {
+            if (!soundEffectsBuffer.loadFromFile("Data/Audio/ElevatorDoorOpening.mp3"))
+                std::cout << "Could not open sound file ElevatorDoorOpening.mp3!\n";
 
-        soundEffect.setBuffer(soundEffectsBuffer);
-        soundEffect.play();
-    }
-    case 4:
-    {
-        if (!soundEffectsBuffer.loadFromFile("Data/Audio/ElevatorDoorClosing.mp3"))
-            std::cout << "Could not open sound file NoclipSFX1.mp3!\n";
+            soundEffect.setBuffer(soundEffectsBuffer);
+            soundEffect.play();
+            break;
+        }
+        case 3:
+        {
+            if (!soundEffectsBuffer.loadFromFile("Data/Audio/ElevatorDoorClosing.mp3"))
+                std::cout << "Could not open sound file ElevatorDoorClosing.mp3!\n";
 
-        soundEffect.setBuffer(soundEffectsBuffer);
-        soundEffect.play();
-    }
-    default:
-        break;
+            soundEffect.setBuffer(soundEffectsBuffer);
+            soundEffect.play();
+            break;
+        }
+        case 4:
+        {
+            if (!soundEffectsBuffer.loadFromFile("Data/Audio/DistortedScream.mp3"))
+                std::cout << "Could not open sound file WomanWilhelmScream.mp3!\n";
+
+            soundEffect.setBuffer(soundEffectsBuffer);
+            soundEffect.play();
+            break;
+        }
+        case 5:
+        {
+            if (!soundEffectsBuffer.loadFromFile("Data/Audio/WalkingSFX.mp3"))
+                std::cout << "Could not open sound file WalkingSFX.mp3!\n";
+
+            soundEffect.setBuffer(soundEffectsBuffer);
+            soundEffect.play();
+            break;
+        }
+        case 6:
+        {
+            if (!soundEffectsBuffer.loadFromFile("Data/Audio/EntitySFX.mp3"))
+            {
+                printf("Cannot open sound file EntitySFX.mp3!\n");
+            }
+            soundEffect.setBuffer(soundEffectsBuffer);
+            soundEffect.play();
+            break;
+        }
+        default:
+            break;
+        }
     }
 }
 
@@ -240,10 +266,10 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
                 }
 
                 if (kb::isKeyPressed(kb::E))
-                    events = true;
+                    randomEvents = true;
 
                 if (kb::isKeyPressed(kb::R))
-                    events = false;
+                    randomEvents = false;
             }
 
             if (kb::isKeyPressed(kb::Equal))
@@ -263,10 +289,10 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
                 currentLevel.footsteps.setPitch(0.9);
             }
 
-            if (kb::isKeyPressed(kb::Space))
+            if (kb::isKeyPressed(kb::Space) && globalClock.getElapsedTime().asMilliseconds() >= 500)
             {
-                cameraHeight = 0.8;
-                //keyboardPressed = true;
+                cameraHeight = 0.80;
+                globalClock.restart();
             }
 
             if (kb::isKeyPressed(kb::E))
@@ -274,7 +300,7 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
                 if (currentLevel.ID == 0 && (int)player.position.x == 2 && (int)player.position.y == 1)
                 {
                     currentLevel.ID_NextLevel = 6;
-                    PlaySFX(0, soundEffect);
+                    PlaySFX(0, soundEffect, 100);
 
                     levelChanged = true;
                 }
@@ -289,14 +315,14 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
 
                 if (currentLevel.ID == 1 && (int)player.position.x == 124 && (int)player.position.y == 123 && coordinatesRecentlyChanged == false)
                 {
-                    PlaySFX(0, soundEffect);
+                    PlaySFX(0, soundEffect, 100);
                     player.position.y = 126.5;
                     coordinatesRecentlyChanged = true;
                     sf::sleep(sf::milliseconds(500));
                 }
                 if (currentLevel.ID == 1 && (int)player.position.x == 124 && (int)player.position.y == 126 && coordinatesRecentlyChanged == false)
                 {
-                    PlaySFX(0, soundEffect);
+                    PlaySFX(0, soundEffect,100);
                     player.position.y = 123;
                     coordinatesRecentlyChanged = true;
                     sf::sleep(sf::milliseconds(500));
@@ -305,14 +331,14 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
                 if (currentLevel.ID == 1 && (int)player.position.x == 1 && (int)player.position.y == 126)
                 {
                     currentLevel.ID_NextLevel = 2;
-                    PlaySFX(0, soundEffect);
+                    PlaySFX(0, soundEffect,100);
 
                     levelChanged = true;
                 }
 
                 if (currentLevel.ID == 2 && (int)player.position.x == 33 && (int)player.position.y == 247 && elevatorCalled == false)
                 {
-                    PlaySFX(2, soundEffect);
+                    PlaySFX(2, soundEffect,100);
                     globalClock.restart();
                     elevatorCalled = true;
                     currentLevel.ID_NextLevel = 4;
@@ -322,14 +348,14 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
 
                 if (currentLevel.ID == 2 && (int)player.position.x == 199 && (int)player.position.y == 99 && elevatorCalled == false)
                 {
-                    PlaySFX(0, soundEffect);
+                    PlaySFX(0, soundEffect,100);
                     player.setPlayerNewPos(201, 99);
                     coordinatesRecentlyChanged = true;
                 }
 
                 if (currentLevel.ID == 2 && (int)player.position.x == 124 && (int)player.position.y == 177)
                 {
-                    PlaySFX(0, soundEffect);
+                    PlaySFX(0, soundEffect,100);
                     currentLevel.ID_NextLevel = 3;
 
                     levelChanged = true;
@@ -337,14 +363,14 @@ void KeyboardInput(bool hasFocus, Player& player, sf::Vector2f size, float dt) /
 
                 if (currentLevel.ID == 5 && (int)player.position.x == 1 && (int)player.position.y == 2)
                 {
-                    PlaySFX(0, soundEffect);
+                    PlaySFX(0, soundEffect,100);
                     player.setPlayerNewPos(5, 2.5);
                     coordinatesRecentlyChanged = true;
                 }
 
                 if (currentLevel.ID == 5 && (int)player.position.x == 4 && (int)player.position.y == 2)
                 {
-                    PlaySFX(0, soundEffect);
+                    PlaySFX(0, soundEffect,100);
                     player.setPlayerNewPos(1.5, 3);
                     coordinatesRecentlyChanged = true;
                 }
@@ -712,7 +738,7 @@ void Raycasting(sf::RenderWindow& window, sf::RenderStates state, sf::VertexArra
     window.draw(lines, state);
 }
 
-void GoToNextLevel(sf::RenderWindow &window, sf::RenderStates state)
+void GoToNextLevel(sf::RenderWindow &window, sf::RenderStates state, bool defaultPlayerStartingPos)
 {
     currentLevel.AmbientSFX.stop();
     currentLevel.AmbientSFX2.stop();
@@ -720,7 +746,7 @@ void GoToNextLevel(sf::RenderWindow &window, sf::RenderStates state)
     free(currentLevel.map);
     free(currentLevel.heightMap);
     currentLevel.ID = currentLevel.ID_NextLevel;
-    currentLevel.loadLevel(window, state);
+    currentLevel.loadLevel(window, state, defaultPlayerStartingPos);
     levelChanged = false;
 }
 
@@ -737,41 +763,104 @@ void SetBlackScreen(sf::RenderWindow& window, sf::Time seconds)
 
 void RandomEvent()
 {
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    srand(seed);
+    //unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    srand(time(0));
 
     unsigned int randomNumber;
-    unsigned int randomEntitySFX;
+    unsigned int randomSFX;
+    unsigned int random;
 
-    if (eventsGlobalClock.getElapsedTime().asSeconds() >= 30)
+    if (currentLevel.ID == 1 || currentLevel.ID == 2 || currentLevel.ID == 3)
     {
-        randomNumber = rand() % 100 + 1;
-        randomEntitySFX = rand() % 100 + 1;
+        if (eventsGlobalClock.getElapsedTime().asSeconds() >= 300)
+        {
+            randomNumber = rand() % 100 + 1;
+            randomSFX = rand() % 100 + 1;
 
-        if (randomNumber >= 90 && RENDER_DISTANCE != 4)
-        {
-            RENDER_DISTANCE = 4;
-            wallShading = 10;
-            eventsGlobalClock.restart();
-        }
-        else if (eventsGlobalClock.getElapsedTime().asSeconds() >= 30)
-        {
-            RENDER_DISTANCE = RENDER_DISTANCE_COPY;
-            wallShading = currentLevel.defaultWallShading;
-            floorShading = wallShading;
-            ceilingShading = wallShading;
-            eventsGlobalClock.restart();
-        }
+            if (randomNumber >= 90 && RENDER_DISTANCE != 4)
+            {
+                RENDER_DISTANCE = 4;
+                wallShading = 10;
+                eventsGlobalClock.restart();
+            }
+            else if (eventsGlobalClock.getElapsedTime().asSeconds() >= 300)
+            {
+                RENDER_DISTANCE = RENDER_DISTANCE_COPY;
+                wallShading = currentLevel.defaultWallShading;
+                floorShading = wallShading;
+                ceilingShading = wallShading;
+                eventsGlobalClock.restart();
+            }
 
-        if (randomEntitySFX >= 70 && RENDER_DISTANCE == 4)
-        {
-            currentLevel.EntitySFX.play();
-            eventsGlobalClock.restart();
+            if (randomSFX >= 70 && RENDER_DISTANCE == 4)
+            {
+                random = rand() % 3;
+                switch (random)
+                {
+                case 0:
+                    PlaySFX(6, currentLevel.EntitySFX, 20);
+                    break;
+                case 1:
+                    PlaySFX(4, currentLevel.EntitySFX,20);
+                    break;
+                case 2:
+                    PlaySFX(5, currentLevel.EntitySFX,20);
+                    break;
+                default:
+                    break;
+                }
+                currentLevel.EntitySFX.play();
+                eventsGlobalClock.restart();
+            }
+            else if (randomSFX >= 95)
+            {
+                random = rand() % 3;
+                std::cout <<"\n random nr sfx = " << random;
+                switch (random)
+                {
+                case 0:
+                    PlaySFX(6, currentLevel.EntitySFX, 20);
+                    break;
+                case 1:
+                    PlaySFX(4, currentLevel.EntitySFX,20);
+                    break;
+                case 2:
+                    PlaySFX(5, currentLevel.EntitySFX,20);
+                    break;
+                default:
+                    break;
+                }
+                eventsGlobalClock.restart();
+            }
         }
-        else if(randomEntitySFX >= 95)
+    }
+    
+    if (currentLevel.ID == 6)
+    {
+        if (eventsGlobalClock.getElapsedTime().asSeconds() >= 300)
         {
-            currentLevel.EntitySFX.play();
-            eventsGlobalClock.restart();
+            randomSFX = rand() % 100 + 1;
+
+            if (randomSFX >= 70)
+            {
+                random = rand() % 3;
+                std::cout << "\n random nr sfx = " << random;
+                switch (random)
+                {
+                case 0:
+                    PlaySFX(6, currentLevel.EntitySFX, 20);
+                    break;
+                case 1:
+                    PlaySFX(4, currentLevel.EntitySFX,20);
+                    break;
+                case 2:
+                    PlaySFX(5, currentLevel.EntitySFX,20);
+                    break;
+                default:
+                    break;
+                }
+                eventsGlobalClock.restart();
+            }
         }
     }
 }
@@ -795,7 +884,6 @@ int main()
         return 1;
     }
    
-    LoadSaveFile();
     LoadUserSettingsData(); 
 
     sf::RenderWindow window(sf::VideoMode(screenWidth, screenHeight), "Backrooms"); // create window after loading everything up
@@ -861,16 +949,17 @@ int main()
                     if (globalClock.getElapsedTime().asSeconds() >= 2)
                     {
                         SetBlackScreen(window, sf::seconds(1));
-                        GoToNextLevel(window, state);
+                        GoToNextLevel(window, state, true);
                     }
                 }
                 else
                 {
-                    GoToNextLevel(window, state);
+                    GoToNextLevel(window, state, true);
                 }
             }
 
-            RandomEvent();
+            if(randomEvents == true)
+                RandomEvent();
 
             KeyboardInput(hasFocus, player, size, dt);
             //printf("X: %f Y: %f ", player.position.x, player.position.y);
